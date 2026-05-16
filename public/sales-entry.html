@@ -161,7 +161,7 @@ select.field { cursor: pointer; }
         </div>
         <div class="grid2">
           <input id="custAddress" type="text" class="field" placeholder="العنوان (اختياري)"
-                 oninput="validateAddress(this)" maxlength="12">
+                 oninput="validateAddress(this)" maxlength="22">
           <select id="custType" class="field">
             <option value="" disabled selected>نوع الزبون</option>
             <option value="normal">زبون عادي</option>
@@ -185,7 +185,7 @@ select.field { cursor: pointer; }
       </div>
       <div id="itemsContainer" style="display:flex;flex-direction:column;gap:8px">
         <div class="item-card">
-          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
           <div style="display:flex;gap:7px">
             <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
             <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
@@ -242,11 +242,10 @@ function validatePhone(el) {
   }
 }
 
-/* Address: alphanumeric + spaces only, max 12 chars */
+/* Address: Arabic letters, English letters, digits, spaces only — max 22 chars */
 function validateAddress(el) {
-  /* Remove anything that isn't a letter (Arabic/Latin), digit, or space */
-  el.value = el.value.replace(/[^\p{L}\p{N} ]/gu, '');
-  if (el.value.length > 12) el.value = el.value.slice(0, 12);
+  el.value = el.value.replace(/[^؀-ۿa-zA-Z0-9 ]/g, '');
+  if (el.value.length > 22) el.value = el.value.slice(0, 22);
 }
 
 /* Enforce max 8 digits on price, max 3 digits (999) on qty */
@@ -267,7 +266,7 @@ function addItem() {
     <button type="button" class="del-btn" onclick="this.parentElement.remove();calcTotal()">
       <i data-lucide="x" style="width:11px;height:11px"></i>
     </button>
-    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
     <div style="display:flex;gap:7px">
       <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
       <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
@@ -298,7 +297,7 @@ function resetForm() {
   document.getElementById('custType').selectedIndex=0;
   document.getElementById('itemsContainer').innerHTML=`
     <div class="item-card">
-      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
       <div style="display:flex;gap:7px">
         <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
         <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
