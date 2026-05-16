@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>تفاصيل العميل | Horeca Spot</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+.stat-block {
+  background:#fff; border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1rem 1.1rem;
+  box-shadow:var(--shadow-card);
+}
+.wa-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:0.5rem 1.1rem; border-radius:0.75rem;
+  background:#25D366; color:#fff; text-decoration:none;
+  font-weight:800; font-size:0.78rem;
+  box-shadow:0 4px 14px rgba(37,211,102,0.22);
+  transition:background 0.18s; font-family:'Cairo',sans-serif;
+}
+.wa-btn:hover { background:#1EBE5D; }
+.back-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:0.78rem; font-weight:700; color:var(--text-sub);
+  background:none; border:none; cursor:pointer;
+  font-family:'Cairo',sans-serif; transition:color 0.16s; padding:0;
+}
+.back-btn:hover { color:var(--indigo); }
+
+.print-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:0.5rem 1.1rem; border-radius:0.75rem;
+  background:#fff; color:var(--indigo);
+  border:1.5px solid rgba(79,70,229,0.28);
+  font-weight:800; font-size:0.78rem; cursor:pointer;
+  font-family:'Cairo',sans-serif;
+  box-shadow:0 1px 6px rgba(79,70,229,0.08);
+  transition:background 0.16s, box-shadow 0.16s;
+}
+.print-btn:hover {
+  background:var(--indigo-soft);
+  box-shadow:0 3px 12px rgba(79,70,229,0.14);
+}
+
+/* ══════════════════════════════════════════════════════
+   PRINT STYLES — @media print
+   Hides all UI chrome; shows only #printable-statement.
+   Browser native engine = perfect Arabic RTL, zero bugs.
+══════════════════════════════════════════════════════ */
+@media print {
+  @page { size: A4 portrait; margin: 14mm 12mm 12mm; }
+
+  /* Hide every screen element */
+  body > *:not(#printable-statement) { display:none !important; }
+
+  #printable-statement {
+    display:block !important;
+    position:static !important;
+    width:100% !important;
+    font-family:'Cairo','Tajawal',sans-serif !important;
+    direction:rtl;
+    text-align:right;
+    color:#0f172a;
+    font-size:10pt;
+    line-height:1.6;
+    background:#fff;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* ── Header ── */
+  .ps-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:10px;
+    border-bottom:2px solid #4f46e5;
+    margin-bottom:14px;
+  }
+  .ps-logo { height:30px; object-fit:contain; }
+  .ps-title { font-size:14pt; font-weight:900; color:#0f172a; }
+  .ps-meta  { font-size:8pt; color:#64748b; margin-top:2px; }
+
+  /* ── Customer profile block ── */
+  .ps-profile {
+    display:flex; align-items:center; gap:14px;
+    background:#f8fafc !important;
+    border:1px solid #e2e8f0 !important;
+    border-radius:10px; padding:10px 14px; margin-bottom:12px;
+  }
+  .ps-avatar {
+    width:44px; height:44px; border-radius:10px;
+    background:#ede9fe !important; color:#4f46e5 !important;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:13pt; flex-shrink:0;
+  }
+  .ps-name  { font-size:13pt; font-weight:900; color:#0f172a; }
+  .ps-badge {
+    display:inline-block; padding:1px 8px; border-radius:9999px;
+    background:#ede9fe !important; color:#4f46e5 !important;
+    font-size:7.5pt; font-weight:800;
+  }
+  .ps-detail { font-size:8pt; color:#64748b; margin-top:3px; }
+
+  /* ── Stats row ── */
+  .ps-stats {
+    display:flex; gap:8px; margin-bottom:14px;
+  }
+  .ps-stat {
+    flex:1; border:1px solid #e2e8f0 !important;
+    border-radius:8px; padding:8px 10px;
+    background:#fff !important;
+  }
+  .ps-stat-lbl { font-size:7pt; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; }
+  .ps-stat-val { font-size:14pt; font-weight:900; color:#4f46e5 !important; margin-top:2px; }
+  .ps-stat-sub { font-size:7pt; color:#10b981 !important; font-weight:700; }
+
+  /* ── Table ── */
+  .ps-table-title {
+    font-size:10pt; font-weight:900; color:#0f172a;
+    border-bottom:1px solid #e2e8f0 !important;
+    padding-bottom:6px; margin-bottom:0;
+  }
+  .ps-table { width:100%; border-collapse:collapse; font-size:8.5pt; margin-top:0; }
+  .ps-table thead tr { background:#4f46e5 !important; }
+  .ps-table thead th {
+    color:#fff !important; font-weight:800; padding:5px 8px;
+    text-align:right; font-size:8pt;
+  }
+  .ps-table tbody tr { page-break-inside:avoid; }
+  .ps-table tbody tr:nth-child(even) { background:#f8fafc !important; }
+  .ps-table tbody tr:nth-child(odd)  { background:#fff !important; }
+  .ps-table tbody td { padding:5px 8px; border-bottom:1px solid #e2e8f0 !important; }
+  .ps-table tbody td.ps-amount {
+    font-weight:900; color:#4f46e5 !important;
+    direction:ltr; text-align:left;
+  }
+  .ps-table tbody td.ps-center { text-align:center; }
+  .ps-subtotal td { background:#ede9fe !important; }
+  .ps-subtotal .ps-amount { color:#4f46e5 !important; }
+
+  /* ── Footer ── */
+  .ps-footer {
+    margin-top:14px; font-size:7.5pt; color:#94a3b8;
+    text-align:center; border-top:1px solid #e2e8f0 !important; padding-top:6px;
+  }
+}
+
+/* Hidden on screen — only shown by @media print */
+#printable-statement { display:none; }
+</style>
+</head>
+<body>
+
+<div class="hs-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ════ SIDEBAR ════════════════════════════════════════ -->
+<aside class="hs-sidebar" id="sidebar">
+  <div class="hs-sidebar__logo">
+    <img src="logoen.png" alt="Horeca Spot">
+    <button class="hs-sidebar__close" onclick="closeSidebar()">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+  <div class="hs-sidebar__status">
+    <span class="hs-sidebar__status-dot"></span><span>النظام يعمل</span>
+  </div>
+  <nav class="hs-nav">
+    <a href="dashboard.html" class="hs-nav__link">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>لوحة التحكم</span>
+    </a>
+    <a href="customer-records.html" class="hs-nav__link active">
+      <i data-lucide="users" class="w-4 h-4"></i><span>قاعدة العملاء</span>
+    </a>
+    <a href="reports.html" class="hs-nav__link">
+      <i data-lucide="bar-chart-2" class="w-4 h-4"></i><span>التقارير المتقدمة</span>
+    </a>
+  </nav>
+  <div class="hs-sidebar__user">
+    <div class="hs-sidebar__avatar" id="sidebarInitial">M</div>
+    <div>
+      <div class="hs-sidebar__uname" id="sidebarUsername">المدير</div>
+      <div class="hs-sidebar__urole">Manager · Horeca Spot</div>
+    </div>
+  </div>
+  <button class="hs-sidebar__logout" onclick="logout()">
+    <i data-lucide="log-out" class="w-4 h-4"></i><span>تسجيل الخروج</span>
+  </button>
+</aside>
+
+<header class="hs-topbar">
+  <button class="hs-topbar__burger" onclick="openSidebar()">
+    <i data-lucide="menu" class="w-4 h-4" style="color:#fff"></i>
+  </button>
+  <img src="logoen.png" class="hs-topbar__logo" alt="Horeca Spot">
+  <div style="width:36px"></div>
+</header>
+
+<!-- ════ MAIN ════════════════════════════════════════════ -->
+<main class="hs-main">
+
+  <div id="loadingState" style="text-align:center;padding:3rem;color:var(--text-dim);font-weight:700;font-size:0.85rem">
+    جاري تحميل بيانات العميل...
+  </div>
+  <div id="errorState" class="hidden" style="text-align:center;padding:3rem;color:#ef4444;font-weight:700;font-size:0.85rem"></div>
+
+  <div id="profileContent" class="hidden">
+
+    <!-- Nav row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1rem" class="hs-au hs-d1">
+      <button class="back-btn" onclick="history.back()">
+        <i data-lucide="arrow-right" style="width:15px;height:15px"></i>
+        العودة لقائمة العملاء
+      </button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="print-btn" onclick="printStatement()">
+          <i data-lucide="printer" style="width:14px;height:14px"></i>
+          طباعة كشف الحساب
+        </button>
+        <a id="whatsappBtn" href="#" target="_blank" class="wa-btn">
+          <i data-lucide="message-circle" style="width:15px;height:15px"></i>
+          مراسلة واتساب
+        </a>
+      </div>
+    </div>
+
+    <!-- Profile header -->
+    <div class="hs-card hs-au hs-d2" style="padding:1.1rem 1.25rem;margin-bottom:12px;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <div id="profileInitials" style="width:52px;height:52px;border-radius:14px;background:var(--indigo-soft);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95rem;flex-shrink:0;box-shadow:0 4px 16px rgba(79,70,229,0.14)"></div>
+      <div style="flex-grow:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <h1 id="profileName" style="font-size:1.15rem;font-weight:900;color:var(--text)"></h1>
+          <span id="profileType" class="hs-badge"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:5px">
+          <span id="profileAddress" style="display:flex;align-items:center;gap:5px;font-size:0.76rem;font-weight:700;color:var(--text-sub)"></span>
+          <span id="profilePhone"   style="display:flex;align-items:center;gap:5px;font-size:0.76rem;font-weight:700;color:var(--text-sub)"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px" class="hs-au hs-d3">
+
+      <div class="stat-block acc-m">
+        <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)">إجمالي المبيعات</div>
+        <div id="statTotal" style="font-size:1.4rem;font-weight:900;color:var(--indigo);line-height:1.1;margin-top:4px">—</div>
+        <div style="font-size:0.6rem;font-weight:700;color:var(--emerald);margin-top:2px">IQD</div>
+      </div>
+
+      <div class="stat-block acc-n">
+        <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)">عدد الزيارات</div>
+        <div style="display:flex;align-items:baseline;gap:5px;margin-top:4px">
+          <span id="statVisits" style="font-size:1.4rem;font-weight:900;color:var(--text);line-height:1.1">—</span>
+          <span style="font-size:0.7rem;font-weight:700;color:var(--text-dim)">زيارة</span>
+        </div>
+      </div>
+
+      <div class="stat-block acc-r">
+        <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim)">آخر معاملة</div>
+        <div id="statLastDate" style="font-size:1rem;font-weight:900;color:var(--text);line-height:1.2;margin-top:4px">—</div>
+      </div>
+    </div>
+
+    <!-- Invoice history -->
+    <div class="hs-card hs-au hs-d4" style="overflow:hidden">
+      <div class="hs-sec-hdr">
+        <div>
+          <div class="hs-sec-title">سجل المشتريات</div>
+          <div class="hs-sec-sub" id="invoiceCount">—</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="hs-table">
+          <thead><tr>
+            <th>التاريخ</th>
+            <th>المادة المشتراة</th>
+            <th style="text-align:center">الكمية</th>
+            <th style="text-align:left">السعر</th>
+          </tr></thead>
+          <tbody id="invoicesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- Print statement surface — invisible on screen, shown only by @media print -->
+<div id="printable-statement"></div>
+
+<nav class="hs-botnav">
+  <a href="dashboard.html" class="hs-botnav__item">
+    <i data-lucide="layout-dashboard"></i><span>الرئيسية</span>
+  </a>
+  <a href="customer-records.html" class="hs-botnav__item active">
+    <i data-lucide="users"></i><span>العملاء</span>
+  </a>
+  <a href="reports.html" class="hs-botnav__item">
+    <i data-lucide="bar-chart-2"></i><span>تقارير</span>
+  </a>
+  <button class="hs-botnav__item" onclick="logout()" style="color:rgba(244,63,94,0.5)">
+    <i data-lucide="log-out"></i><span>خروج</span>
+  </button>
+</nav>
+
+<!-- Responsive stats grid fix -->
+<style>@media(max-width:520px){ div[style*="grid-template-columns:repeat(3,1fr)"]{ grid-template-columns:1fr!important; } }</style>
+
+<script>
+lucide.createIcons();
+const token = localStorage.getItem('token');
+if (!token || localStorage.getItem('role') !== 'manager') location.href = '/login.html';
+const uname = localStorage.getItem('username') || 'المدير';
+document.getElementById('sidebarUsername').textContent = uname;
+document.getElementById('sidebarInitial').textContent  = uname.charAt(0).toUpperCase();
+function logout()       { localStorage.clear(); location.href = '/login.html'; }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open');    document.getElementById('overlay').classList.add('visible'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('visible'); }
+
+const TL={restaurant:'صاحب مطعم',coffee:'صاحب كوفي',shop:'صاحب محل',normal:'زبون عادي'};
+const fmtDate=iso=>iso?new Date(iso).toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'}):'—';
+
+/* ── Print customer statement using native browser engine ── */
+function printStatement() {
+  /* Read data from the already-rendered DOM */
+  const name     = document.getElementById('profileName').textContent;
+  const type     = document.getElementById('profileType').textContent;
+  const initials = document.getElementById('profileInitials').textContent;
+  const phone    = document.getElementById('profilePhone').textContent.trim();
+  const address  = document.getElementById('profileAddress').textContent.trim();
+  const total    = document.getElementById('statTotal').textContent;
+  const visits   = document.getElementById('statVisits').textContent;
+  const lastDate = document.getElementById('statLastDate').textContent;
+  const invCount = document.getElementById('invoiceCount').textContent;
+  const today    = new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
+
+  /* Clone the invoice table rows exactly as rendered */
+  const tbodyClone = document.getElementById('invoicesBody').innerHTML;
+
+  document.getElementById('printable-statement').innerHTML = `
+    <div class="ps-header">
+      <div>
+        <div class="ps-title">كشف حساب العميل</div>
+        <div class="ps-meta">تاريخ الإصدار: ${today}</div>
+      </div>
+      <img src="logoen.png" class="ps-logo" alt="Horeca Spot">
+    </div>
+
+    <div class="ps-profile">
+      <div class="ps-avatar">${initials}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="ps-name">${name}</span>
+          <span class="ps-badge">${type}</span>
+        </div>
+        <div class="ps-detail">
+          ${address ? address + ' &nbsp;|&nbsp; ' : ''}${phone}
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-stats">
+      <div class="ps-stat">
+        <div class="ps-stat-lbl">إجمالي المبيعات</div>
+        <div class="ps-stat-val">${total}</div>
+        <div class="ps-stat-sub">IQD</div>
+      </div>
+      <div class="ps-stat">
+        <div class="ps-stat-lbl">عدد الزيارات</div>
+        <div class="ps-stat-val">${visits}</div>
+        <div class="ps-stat-sub">زيارة</div>
+      </div>
+      <div class="ps-stat">
+        <div class="ps-stat-lbl">آخر معاملة</div>
+        <div class="ps-stat-val" style="font-size:10pt">${lastDate}</div>
+      </div>
+    </div>
+
+    <div class="ps-table-title">سجل المشتريات &nbsp;—&nbsp; ${invCount}</div>
+    <table class="ps-table">
+      <thead><tr>
+        <th>التاريخ</th>
+        <th>المادة المشتراة</th>
+        <th class="ps-center">الكمية</th>
+        <th>السعر</th>
+      </tr></thead>
+      <tbody>${tbodyClone}</tbody>
+    </table>
+
+    <div class="ps-footer">
+      Horeca Spot CRM &nbsp;&bull;&nbsp; جميع الحقوق محفوظة &nbsp;&bull;&nbsp; ${today}
+    </div>`;
+
+  const cleanup = () => {
+    document.getElementById('printable-statement').innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
+
+async function loadProfile() {
+  const id=new URLSearchParams(location.search).get('id');
+  if(!id||isNaN(id)){
+    document.getElementById('loadingState').classList.add('hidden');
+    const e=document.getElementById('errorState');
+    e.textContent='معرف العميل غير صالح'; e.classList.remove('hidden'); return;
+  }
+  try {
+    const res=await fetch(`/api/customers/${id}`,{headers:{'Authorization':`Bearer ${token}`}});
+    if(res.status===401||res.status===403){logout();return;}
+    if(res.status===404) throw new Error('not found');
+    const {customer:c, invoices}=await res.json();
+
+    document.getElementById('profileInitials').textContent=c.name.trim().substring(0,2).toUpperCase();
+    document.getElementById('profileName').textContent=c.name;
+    document.getElementById('profileType').textContent=TL[c.type]||c.type||'—';
+
+    if(c.address) document.getElementById('profileAddress').innerHTML=`<i data-lucide="map-pin" style="width:13px;height:13px"></i> ${c.address}`;
+    document.getElementById('profilePhone').innerHTML=`<i data-lucide="phone" style="width:13px;height:13px"></i> ${c.phone}`;
+
+    const raw=c.phone.replace(/\D/g,'');
+    document.getElementById('whatsappBtn').href=`https://wa.me/${raw.startsWith('0')?'964'+raw.slice(1):raw}`;
+
+    document.getElementById('statTotal').textContent=Number(c.total_spent).toLocaleString('en-US');
+    document.getElementById('statVisits').textContent=c.visit_count;
+    document.getElementById('statLastDate').textContent=fmtDate(c.last_transaction);
+
+    const tb=document.getElementById('invoicesBody');
+    document.getElementById('invoiceCount').textContent=`${invoices.length} فاتورة`;
+
+    if(!invoices.length){
+      tb.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد فواتير</td></tr>`;
+    } else {
+      let html='';
+      invoices.forEach(inv=>{
+        const items=Array.isArray(inv.items_json)?inv.items_json:JSON.parse(inv.items_json);
+        items.forEach((item,idx)=>{
+          html+=`<tr>
+            <td style="color:var(--text-sub);font-size:0.74rem;font-weight:600">
+              ${idx===0?`<span style="font-weight:800;color:var(--text);font-size:0.78rem">${fmtDate(inv.date)}</span>`:''}
+            </td>
+            <td style="font-weight:700;font-size:0.78rem;color:var(--text)">${item.name}</td>
+            <td style="text-align:center">
+              <span style="background:rgba(26,34,50,0.07);color:var(--text);padding:2px 9px;border-radius:6px;font-size:0.68rem;font-weight:900">${item.qty}</span>
+            </td>
+            <td style="text-align:left;font-weight:900;font-size:0.78rem;color:var(--text)">
+              ${Number(item.price*item.qty).toLocaleString('en-US')} IQD
+            </td>
+          </tr>`;
+        });
+        html+=`<tr style="background:var(--indigo-soft)">
+          <td colspan="3" style="padding:5px 14px;font-size:0.6rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">إجمالي الفاتورة</td>
+          <td style="text-align:left;padding:5px 14px;font-weight:900;font-size:0.78rem;color:var(--indigo)">${Number(inv.total_amount).toLocaleString('en-US')} IQD</td>
+        </tr>`;
+      });
+      tb.innerHTML=html;
+    }
+
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('profileContent').classList.remove('hidden');
+    lucide.createIcons();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loadingState').classList.add('hidden');
+    const err=document.getElementById('errorState');
+    err.textContent='فشل في تحميل بيانات العميل'; err.classList.remove('hidden');
+  }
+}
+loadProfile();
+</script>
+</body>
+</html>

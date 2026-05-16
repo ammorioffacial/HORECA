@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | Horeca Spot</title>
+    
+    <!-- الخط الرسمي -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- مكتبة التنسيق -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- مكتبة الأيقونات -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#212B3E',
+                        mahogany: '#77413E',
+                        rose: '#DD9C91',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background-color: #f8f9fa; 
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; padding: 20px;
+        }
+        .white-card {
+            background: #ffffff;
+            box-shadow: 0 20px 60px rgba(33, 43, 62, 0.05);
+            width: 100%; max-width: 420px;
+        }
+        .input-style {
+            border: 1.5px solid #E5E7EB;
+            transition: all 0.3s ease;
+        }
+        .input-style:focus {
+            border-color: #e9a4a0;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(119, 65, 62, 0.05);
+        }
+        .gradient-btn {
+            background: linear-gradient(135deg, #e9b1ae 0%, #DD9C91 100%);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="white-card rounded-[3rem] p-10 md:p-14 relative overflow-hidden">
+        
+        <!-- الشعار -->
+        <div class="text-center mb-10">
+            <img src="logoen.png" alt="Horeca Spot" class="h-14 w-auto mx-auto mb-10 object-contain">
+            <h2 class="text-3xl font-extrabold text-navy mb-2">تسجيل الدخول</h2>
+            <p class="text-navy/40 font-medium text-sm">مرحباً بك مجدداً في النظام</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            
+            <!-- حقل البريد مع أيقونة يوزر -->
+            <div class="relative group">
+                <div class="absolute right-5 top-1/2 -translate-y-1/2 text-navy/20 group-focus-within:text-mahogany transition-colors">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <input type="email" id="email" placeholder="البريد الإلكتروني" 
+                       class="input-style w-full py-5 pr-14 pl-6 rounded-2xl text-navy font-bold placeholder:font-normal" required>
+            </div>
+
+            <!-- حقل كلمة المرور مع أيقونة قفل وعين -->
+            <div class="relative group">
+                <div class="absolute right-5 top-1/2 -translate-y-1/2 text-navy/20 group-focus-within:text-mahogany transition-colors">
+                    <i data-lucide="lock" class="w-5 h-5"></i>
+                </div>
+                <input type="password" id="password" placeholder="كلمة المرور" 
+                       class="input-style w-full py-5 pr-14 pl-14 rounded-2xl text-navy font-bold placeholder:font-normal" required>
+                
+                <!-- أيقونة العين على اليسار -->
+                <button type="button" onclick="togglePassword()" class="absolute left-5 top-1/2 -translate-y-1/2 text-navy/20 hover:text-mahogany transition-colors">
+                    <i data-lucide="eye" id="eyeIcon" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- زر الدخول مع أيقونة دخول -->
+            <button type="submit" class="gradient-btn w-full py-5 rounded-2xl text-white font-extrabold text-xl flex items-center justify-center gap-3 shadow-xl mt-4">
+                <span>دخول للنظام</span>
+                <i data-lucide="log-in" class="w-6 h-6"></i>
+            </button>
+        </form>
+
+        <p id="msg" class="mt-8 text-center text-sm font-bold hidden px-4 py-2 rounded-xl"></p>
+    </div>
+
+    <script>
+        // السطر الأهم: تفعيل الأيقونات فوراً
+        window.onload = function() {
+            lucide.createIcons();
+        };
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons(); // تحديث الأيقونة
+        }
+
+        // ملاحظة: تأكد من ربط Supabase كما في الأكواد السابقة
+    </script>
+</body>
+</html>

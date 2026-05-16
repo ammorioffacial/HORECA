@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل العميل | إدارة هوريكا سبوت</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { navy: '#212B3E', mahogany: '#77413E', rose: '#DD9C91' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #FDFDFD; }
+        .data-card { background: white; border: 1px solid #F3F4F6; border-radius: 1.5rem; }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <main class="max-w-6xl mx-auto">
+        <!-- زر العودة لقائمة العملاء -->
+        <div class="mb-8">
+            <button onclick="history.back()" class="flex items-center gap-2 text-navy/50 font-bold hover:text-navy transition-all">
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                <span>العودة لقائمة العملاء</span>
+            </button>
+        </div>
+
+        <!-- رأس الصفحة: معلومات العميل -->
+        <div class="data-card p-8 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
+            <div class="flex items-center gap-6">
+                <div class="w-20 h-20 bg-navy text-white rounded-2xl flex items-center justify-center text-2xl font-black shadow-lg shadow-navy/20">
+                    MB
+                </div>
+                <div>
+                    <div class="flex items-center gap-3 mb-1">
+                        <h1 class="text-3xl font-black text-navy">مطعم بابل</h1>
+                        <span class="bg-rose/10 text-rose px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">صاحب مطعم</span>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-2 md:gap-6 text-sm font-bold text-navy/60 mt-2">
+                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4"></i> بغداد، شارع فلسطين</span>
+                        <span class="flex items-center gap-1"><i data-lucide="phone" class="w-4 h-4"></i> 07701234567</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- زر الواتساب المباشر -->
+            <a href="https://wa.me/9647701234567" target="_blank" class="bg-[#25D366] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-[#25D366]/20 hover:bg-[#1EBE5D] transition-all w-full md:w-auto justify-center">
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                مراسلة واتساب
+            </a>
+        </div>
+
+        <!-- إحصائيات سريعة للعميل -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="data-card p-6 bg-navy text-white shadow-lg shadow-navy/10 border-none">
+                <p class="text-[11px] font-black opacity-50 uppercase tracking-widest">إجمالي المبيعات للعميل</p>
+                <p class="text-3xl font-black mt-2">1,600,000 <span class="text-xs opacity-50">IQD</span></p>
+            </div>
+            <div class="data-card p-6">
+                <p class="text-[11px] font-black text-navy/40 uppercase tracking-widest">عدد الزيارات (أيام الشراء)</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <p class="text-3xl font-black text-navy">2</p>
+                    <span class="text-xs font-bold text-navy/40">زيارات للمعرض</span>
+                </div>
+            </div>
+            <div class="data-card p-6">
+                <p class="text-[11px] font-black text-navy/40 uppercase tracking-widest">تاريخ آخر معاملة</p>
+                <p class="text-xl font-black text-navy mt-3">14 مايو، 2026</p>
+            </div>
+        </div>
+
+        <!-- سجل المشتريات التفصيلي -->
+        <div class="data-card p-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <h3 class="font-black text-navy text-xl">سجل المشتريات</h3>
+                
+                <!-- فلتر التاريخ -->
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-navy/40"></i>
+                    <select class="bg-transparent text-sm font-bold text-navy outline-none cursor-pointer">
+                        <option>كل التواريخ</option>
+                        <option>مايو 2026</option>
+                        <option>أبريل 2026</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- قائمة المواد -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-right whitespace-nowrap">
+                    <thead>
+                        <tr class="text-[11px] font-black text-navy/30 uppercase tracking-widest border-b border-gray-100">
+                            <th class="pb-4 pr-4">التاريخ</th>
+                            <th class="pb-4">المادة المشتراة</th>
+                            <th class="pb-4 text-center">الكمية</th>
+                            <th class="pb-4 text-left pl-4">السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        <!-- الزيارة الثانية -->
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="py-4 pr-4">
+                                <p class="text-sm font-black text-navy">14 مايو، 2026</p>
+                            </td>
+                            <td class="py-4">
+                                <p class="text-sm font-bold text-navy">Le 5 Stagioni Flour - Blue</p>
+                            </td>
+                            <td class="py-4 text-center">
+                                <span class="bg-gray-100 text-navy px-3 py-1 rounded-lg text-xs font-black">10</span>
+                            </td>
+                            <td class="py-4 text-left pl-4 text-sm font-black text-navy">850,000 IQD</td>
+                        </tr>
+                        
+                        <!-- الزيارة الأولى -->
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="py-4 pr-4">
+                                <p class="text-sm font-black text-navy">10 مايو، 2026</p>
+                            </td>
+                            <td class="py-4">
+                                <p class="text-sm font-bold text-navy">Wega Coffee Machine Cleaner</p>
+                            </td>
+                            <td class="py-4 text-center">
+                                <span class="bg-gray-100 text-navy px-3 py-1 rounded-lg text-xs font-black">2</span>
+                            </td>
+                            <td class="py-4 text-left pl-4 text-sm font-black text-navy">750,000 IQD</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

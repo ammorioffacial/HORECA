@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>التقارير المتقدمة | Horeca Spot</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* Reports-page extras */
+.tab-bar { display:flex; gap:3px; padding:3px; background:rgba(15,23,42,0.05); border-radius:10px; }
+.tab-btn {
+  padding:0.38rem 1rem; border-radius:8px; font-size:0.72rem; font-weight:800;
+  border:none; cursor:pointer; transition:all 0.16s;
+  font-family:'Cairo',sans-serif; color:var(--text-sub); background:transparent;
+}
+.tab-btn.active { background:#fff; color:var(--indigo); box-shadow:0 1px 8px rgba(15,23,42,0.08); }
+
+.filter-strip {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  padding:0.85rem 1.1rem; background:rgba(15,23,42,0.02);
+  border-bottom:1px solid var(--border);
+}
+.filter-label { font-size:0.68rem; font-weight:700; color:var(--text-dim); }
+
+.kpi-mini { padding:0.9rem 1rem; }
+.kpi-mini .val { font-size:1.85rem; font-weight:900; color:var(--text); line-height:1; margin-top:4px; letter-spacing:-0.03em; }
+.kpi-mini .lbl { font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-dim); }
+
+.chart-mini { height:155px; position:relative; }
+
+
+@media(max-width:900px){
+  .rpt-charts { grid-template-columns:1fr!important; }
+  .rpt-summary { grid-template-columns:1fr 1fr!important; }
+}
+
+/* ── Print surface: hidden on screen, full-page when printing ── */
+#pdf-print-surface { display: none; }
+
+@media print {
+  /* ── Page setup ── */
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm 12mm;
+  }
+
+  /* Hide every screen element */
+  body > *:not(#pdf-print-surface) { display: none !important; }
+
+  /* Show and reset the print surface */
+  #pdf-print-surface {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    background: #fff !important;
+    font-family: 'Cairo', 'Tajawal', sans-serif !important;
+    direction: rtl;
+    text-align: right;
+    color: #0f172a;
+    font-size: 10pt;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Logo */
+  #pdf-print-surface .pdf-logo-wrap {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  #pdf-print-surface .pdf-logo-wrap img {
+    height: 32px;
+    object-fit: contain;
+  }
+
+  /* Title block */
+  #pdf-print-surface .pdf-title {
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+  #pdf-print-surface .pdf-subtitle {
+    text-align: center;
+    font-size: 8pt;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+
+  /* Indigo rule */
+  #pdf-print-surface .pdf-rule {
+    height: 2px;
+    background: #4f46e5 !important;
+    border-radius: 1px;
+    margin-bottom: 10px;
+  }
+
+  /* KPI boxes */
+  #pdf-print-surface .pdf-kpis {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  #pdf-print-surface .pdf-kpi {
+    flex: 1;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  #pdf-print-surface .pdf-kpi-lbl {
+    font-size: 7pt;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1px;
+  }
+  #pdf-print-surface .pdf-kpi-val {
+    font-size: 13pt;
+    font-weight: 900;
+    color: #4f46e5 !important;
+  }
+
+  /* Data table */
+  #pdf-print-surface table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+  }
+  #pdf-print-surface thead tr {
+    background: #4f46e5 !important;
+  }
+  #pdf-print-surface thead th {
+    color: #fff !important;
+    font-weight: 800;
+    padding: 5px 8px;
+    text-align: right;
+    font-size: 8pt;
+  }
+  #pdf-print-surface tbody tr { page-break-inside: avoid; }
+  #pdf-print-surface tbody tr:nth-child(even) { background: #f8fafc !important; }
+  #pdf-print-surface tbody tr:nth-child(odd)  { background: #ffffff !important; }
+  #pdf-print-surface tbody td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #e2e8f0 !important;
+    vertical-align: middle;
+  }
+  #pdf-print-surface tbody td.amount {
+    font-weight: 900;
+    color: #4f46e5 !important;
+    direction: ltr;
+    text-align: left;
+  }
+  #pdf-print-surface tbody td.num,
+  #pdf-print-surface tbody td.phone,
+  #pdf-print-surface tbody td.date {
+    direction: ltr;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Footer */
+  #pdf-print-surface .pdf-footer {
+    margin-top: 12px;
+    font-size: 7pt;
+    color: #94a3b8;
+    text-align: center;
+    border-top: 1px solid #e2e8f0 !important;
+    padding-top: 5px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- Print surface — populated by exportPDF(), shown only via @media print -->
+<div id="pdf-print-surface"></div>
+
+<div class="hs-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ════ SIDEBAR ════════════════════════════════════════════ -->
+<aside class="hs-sidebar" id="sidebar">
+  <div class="hs-sidebar__logo">
+    <img src="logoen.png" alt="Horeca Spot">
+    <button class="hs-sidebar__close" onclick="closeSidebar()">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+  <div class="hs-sidebar__status">
+    <span class="hs-sidebar__status-dot"></span><span>النظام يعمل</span>
+  </div>
+  <nav class="hs-nav">
+    <a href="dashboard.html" class="hs-nav__link">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>لوحة التحكم</span>
+    </a>
+    <a href="customer-records.html" class="hs-nav__link">
+      <i data-lucide="users" class="w-4 h-4"></i><span>قاعدة العملاء</span>
+    </a>
+    <a href="reports.html" class="hs-nav__link active">
+      <i data-lucide="bar-chart-2" class="w-4 h-4"></i><span>التقارير المتقدمة</span>
+    </a>
+  </nav>
+  <div class="hs-sidebar__user">
+    <div class="hs-sidebar__avatar" id="sidebarInitial">M</div>
+    <div>
+      <div class="hs-sidebar__uname" id="sidebarUsername">المدير</div>
+      <div class="hs-sidebar__urole">Manager · Horeca Spot</div>
+    </div>
+  </div>
+  <button class="hs-sidebar__logout" onclick="logout()">
+    <i data-lucide="log-out" class="w-4 h-4"></i><span>تسجيل الخروج</span>
+  </button>
+</aside>
+
+<!-- ════ MOBILE TOPBAR ══════════════════════════════════════ -->
+<header class="hs-topbar">
+  <button class="hs-topbar__burger" onclick="openSidebar()">
+    <i data-lucide="menu" class="w-4 h-4" style="color:#fff"></i>
+  </button>
+  <img src="logoen.png" class="hs-topbar__logo" alt="Horeca Spot">
+  <div style="width:36px"></div>
+</header>
+
+<!-- ════ MAIN ════════════════════════════════════════════════ -->
+<main class="hs-main">
+
+  <!-- Page header -->
+  <header style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:1rem" class="hs-au hs-d1">
+    <div>
+      <h1 style="font-size:1.35rem;font-weight:900;color:var(--text)">التقارير المتقدمة</h1>
+      <p style="font-size:0.65rem;font-weight:700;color:var(--text-dim);letter-spacing:0.08em;text-transform:uppercase;margin-top:2px">
+        Horeca Spot • Advanced Analytics
+      </p>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <button onclick="exportPDF()" class="hs-export hs-export-pdf">
+        <i data-lucide="file-text" style="width:13px;height:13px"></i> تصدير PDF
+      </button>
+      <button onclick="exportExcel()" class="hs-export hs-export-xlsx">
+        <i data-lucide="table-2" style="width:13px;height:13px"></i> Excel
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Filter + tab card ── -->
+  <div class="hs-card hs-au hs-d2" style="overflow:hidden;margin-bottom:10px">
+    <div class="filter-strip">
+      <div class="tab-bar">
+        <button id="tabSales"     class="tab-btn active" onclick="switchTab('sales')">تقرير المبيعات</button>
+        <button id="tabCustomers" class="tab-btn"        onclick="switchTab('customers')">تقرير العملاء</button>
+      </div>
+      <div style="flex:1;min-width:8px"></div>
+      <span class="filter-label">من</span>
+      <input type="date" id="rptFrom" class="hs-date">
+      <span class="filter-label">إلى</span>
+      <input type="date" id="rptTo" class="hs-date">
+      <button onclick="loadReport()" class="hs-pill active" style="display:flex;align-items:center;gap:4px">
+        <i data-lucide="search" style="width:11px;height:11px"></i> عرض
+      </button>
+      <button onclick="resetDates()" class="hs-pill" style="display:flex;align-items:center;gap:4px">
+        <i data-lucide="rotate-ccw" style="width:11px;height:11px"></i> إعادة
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Summary KPIs ── -->
+  <div id="rptSummary" class="rpt-summary hs-au hs-d3"
+       style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+    <div class="hs-card hs-skel" style="height:76px"></div>
+    <div class="hs-card hs-skel" style="height:76px"></div>
+    <div class="hs-card hs-skel" style="height:76px"></div>
+    <div class="hs-card hs-skel" style="height:76px"></div>
+  </div>
+
+  <!-- ── Charts ── -->
+  <div class="rpt-charts hs-au hs-d4"
+       style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+
+    <div class="hs-card" style="overflow:hidden">
+      <div class="hs-sec-hdr">
+        <div><div class="hs-sec-title" id="c1Title">المبيعات اليومية</div></div>
+        <div class="hs-ibadge ib-m"><i data-lucide="activity" style="width:14px;height:14px"></i></div>
+      </div>
+      <div style="padding:0.85rem"><div class="chart-mini"><canvas id="rptChart1"></canvas></div></div>
+    </div>
+
+    <div class="hs-card" style="overflow:hidden">
+      <div class="hs-sec-hdr">
+        <div><div class="hs-sec-title" id="c2Title">توزيع حسب الفئة</div></div>
+        <div class="hs-ibadge ib-n"><i data-lucide="pie-chart" style="width:14px;height:14px"></i></div>
+      </div>
+      <div style="padding:0.85rem"><div class="chart-mini"><canvas id="rptChart2"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ── Data table ── -->
+  <div class="hs-card hs-au hs-d5" style="overflow:hidden">
+    <div class="hs-sec-hdr">
+      <div>
+        <div class="hs-sec-title" id="tblTitle">سجل البيانات</div>
+        <div class="hs-sec-sub" id="tblSub">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(26,34,50,0.05);padding:5px 10px;border-radius:9999px">
+          <i data-lucide="search" style="width:12px;height:12px;color:var(--text-dim)"></i>
+          <input id="tblSearch" type="text" placeholder="بحث سريع..."
+            style="background:transparent;border:none;outline:none;font-size:0.7rem;font-weight:700;color:var(--text);font-family:'Cairo',sans-serif;width:110px"
+            oninput="filterTable()">
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="hs-table" id="rptTable">
+        <thead><tr id="rptHead"></tr></thead>
+        <tbody id="rptBody">
+          <tr><td colspan="6" style="text-align:center;padding:2rem">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px">
+              <div class="hs-skel" style="width:180px;height:11px"></div>
+              <div class="hs-skel" style="width:130px;height:11px"></div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Bottom nav -->
+<nav class="hs-botnav">
+  <a href="dashboard.html" class="hs-botnav__item">
+    <i data-lucide="layout-dashboard"></i><span>الرئيسية</span>
+  </a>
+  <a href="customer-records.html" class="hs-botnav__item">
+    <i data-lucide="users"></i><span>العملاء</span>
+  </a>
+  <a href="reports.html" class="hs-botnav__item active">
+    <i data-lucide="bar-chart-2"></i><span>تقارير</span>
+  </a>
+  <button class="hs-botnav__item" onclick="logout()" style="color:rgba(244,63,94,0.5)">
+    <i data-lucide="log-out"></i><span>خروج</span>
+  </button>
+</nav>
+
+<script>
+lucide.createIcons();
+
+/* ── Auth ─────────────────────────────────────────────── */
+const token = localStorage.getItem('token');
+if (!token || localStorage.getItem('role') !== 'manager') location.href = '/login.html';
+const uname = localStorage.getItem('username') || 'المدير';
+document.getElementById('sidebarUsername').textContent = uname;
+document.getElementById('sidebarInitial').textContent  = uname.charAt(0).toUpperCase();
+function logout()       { localStorage.clear(); location.href = '/login.html'; }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open');    document.getElementById('overlay').classList.add('visible'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('visible'); }
+
+/* ── State ────────────────────────────────────────────── */
+const CAT = {restaurant:'مطعم',coffee:'كوفي شوب',shop:'محل',normal:'زبون عادي','غير محدد':'غير محدد'};
+const CC  = ['#4f46e5','#10b981','#f59e0b','#64748b','#f43f5e'];
+
+let tab = 'sales', rptData = null, allRows = [], chart1 = null, chart2 = null;
+
+/* ── Dates ────────────────────────────────────────────── */
+function resetDates() {
+  const n=new Date(), y=n.getFullYear(),
+        m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0');
+  document.getElementById('rptFrom').value=`${y}-${m}-01`;
+  document.getElementById('rptTo').value=`${y}-${m}-${d}`;
+}
+resetDates();
+
+/* ── Tab ──────────────────────────────────────────────── */
+function switchTab(t) {
+  tab=t;
+  document.getElementById('tabSales').classList.toggle('active',t==='sales');
+  document.getElementById('tabCustomers').classList.toggle('active',t==='customers');
+  if(rptData) render();
+}
+
+/* ── Chart config ─────────────────────────────────────── */
+const TT={
+  backgroundColor:'#fff',borderColor:'rgba(15,23,42,0.08)',borderWidth:1,
+  titleColor:'#0f172a',bodyColor:'#4f46e5',
+  titleFont:{family:'Cairo',weight:'800',size:11},
+  bodyFont:{family:'Cairo',weight:'700',size:10},padding:10,
+  callbacks:{label:ctx=>` ${Number(ctx.raw).toLocaleString('en-US')} IQD`}
+};
+const SC={
+  grid:{color:'rgba(15,23,42,0.04)',drawBorder:false},
+  ticks:{color:'rgba(15,23,42,0.32)',font:{family:'Cairo',size:10},
+    callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v}
+};
+
+/* ── Load ─────────────────────────────────────────────── */
+async function loadReport() {
+  const from=document.getElementById('rptFrom').value, to=document.getElementById('rptTo').value;
+  const qs=new URLSearchParams(); if(from) qs.set('from',from); if(to) qs.set('to',to);
+
+  // Skeleton
+  document.getElementById('rptSummary').innerHTML =
+    Array(4).fill('<div class="hs-card hs-skel" style="height:76px"></div>').join('');
+  document.getElementById('rptBody').innerHTML =
+    `<tr><td colspan="6" style="text-align:center;padding:2rem"><div class="hs-skel" style="width:160px;height:11px;margin:auto"></div></td></tr>`;
+
+  try {
+    const [sr,cr]=await Promise.all([
+      fetch(`/api/reports/sales?${qs}`,{headers:{'Authorization':`Bearer ${token}`}}),
+      fetch(`/api/reports/customers?${qs}`,{headers:{'Authorization':`Bearer ${token}`}})
+    ]);
+    if(sr.status===401){logout();return;}
+    rptData={sales:await sr.json(), customers:await cr.json()};
+    render(); lucide.createIcons();
+  } catch(e){console.error(e);}
+}
+
+function render() { tab==='sales'?renderSales(rptData.sales):renderCustomers(rptData.customers); }
+
+/* ── Render sales ─────────────────────────────────────── */
+function renderSales(data) {
+  const s=data.summary||{};
+  document.getElementById('c1Title').textContent='المبيعات اليومية';
+  document.getElementById('c2Title').textContent='توزيع حسب نوع الزبون';
+  document.getElementById('tblTitle').textContent='سجل الفواتير';
+
+  const kpis=[
+    {l:'إجمالي المبيعات',  v:Number(s.total_sales||0).toLocaleString('en-US')+' IQD', ac:'#4f46e5'},
+    {l:'عدد الفواتير',     v:s.total_invoices||0,                                     ac:'#10b981'},
+    {l:'متوسط الفاتورة',   v:Math.round(s.avg_invoice||0).toLocaleString('en-US')+' IQD', ac:'#f59e0b'},
+    {l:'عملاء في الفترة',  v:s.unique_customers||0,                                   ac:'#64748b'},
+  ];
+  document.getElementById('rptSummary').innerHTML=kpis.map(k=>`
+    <div class="hs-card kpi-mini" style="border-right:3px solid ${k.ac}">
+      <div class="lbl">${k.l}</div>
+      <div class="val" style="color:${k.ac}">${k.v}</div>
+    </div>`).join('');
+
+  // Chart 1: daily bar
+  const daily=data.daily||[];
+  if(chart1) chart1.destroy();
+  const c1=document.getElementById('rptChart1').getContext('2d');
+  const bg=c1.createLinearGradient(0,0,0,155);
+  bg.addColorStop(0,'rgba(79,70,229,0.85)'); bg.addColorStop(1,'rgba(79,70,229,0.25)');
+  chart1=new Chart(c1,{type:'bar',
+    data:{labels:daily.map(d=>d.day+''),datasets:[{data:daily.map(d=>Number(d.sales)),backgroundColor:bg,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:600,easing:'easeInOutQuart'},
+      plugins:{legend:{display:false},tooltip:{...TT}},scales:{x:{...SC,ticks:{...SC.ticks,callback:v=>v}},y:SC}}});
+
+  // Chart 2: customer type donut
+  const tc={};(data.invoices||[]).forEach(i=>{const t=CAT[i.customer_type]||i.customer_type||'غير محدد';tc[t]=(tc[t]||0)+1;});
+  const tk=Object.keys(tc);
+  if(chart2) chart2.destroy();
+  chart2=new Chart(document.getElementById('rptChart2').getContext('2d'),{type:'doughnut',
+    data:{labels:tk,datasets:[{data:tk.map(k=>tc[k]),backgroundColor:CC,borderColor:'#fff',borderWidth:4,hoverOffset:8}]},
+    options:{cutout:'72%',animation:{duration:650},
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'Cairo',size:10},color:'#1A2232',padding:7,boxWidth:9}},
+        tooltip:{...TT,callbacks:{}}},responsive:true,maintainAspectRatio:false}});
+
+  // Table
+  document.getElementById('rptHead').innerHTML='<th>التاريخ</th><th>العميل</th><th>الفئة</th><th>الهاتف</th><th style="text-align:left">الإجمالي (IQD)</th>';
+  allRows=data.invoices||[];
+  document.getElementById('tblSub').textContent=`${allRows.length} فاتورة`;
+  document.getElementById('tblSearch').value='';
+  renderRows(allRows,'sales');
+}
+
+/* ── Render customers ─────────────────────────────────── */
+function renderCustomers(customers) {
+  document.getElementById('c1Title').textContent='أعلى العملاء إنفاقاً';
+  document.getElementById('c2Title').textContent='توزيع حسب الفئة';
+  document.getElementById('tblTitle').textContent='قائمة العملاء';
+
+  const ts=customers.reduce((s,c)=>s+Number(c.total_spent),0);
+  const tv=customers.reduce((s,c)=>s+Number(c.visit_count),0);
+  const kpis=[
+    {l:'إجمالي العملاء',  v:customers.length,                                                  ac:'#4f46e5'},
+    {l:'إجمالي الإنفاق', v:ts.toLocaleString('en-US')+' IQD',                                 ac:'#10b981'},
+    {l:'إجمالي الزيارات',v:tv,                                                                  ac:'#f59e0b'},
+    {l:'متوسط الإنفاق',  v:customers.length?Math.round(ts/customers.length).toLocaleString('en-US')+' IQD':'—', ac:'#64748b'},
+  ];
+  document.getElementById('rptSummary').innerHTML=kpis.map(k=>`
+    <div class="hs-card kpi-mini" style="border-right:3px solid ${k.ac}">
+      <div class="lbl">${k.l}</div>
+      <div class="val" style="color:${k.ac}">${k.v}</div>
+    </div>`).join('');
+
+  // Chart 1: top 8 horizontal bar
+  const top8=[...customers].sort((a,b)=>Number(b.total_spent)-Number(a.total_spent)).slice(0,8);
+  if(chart1) chart1.destroy();
+  chart1=new Chart(document.getElementById('rptChart1').getContext('2d'),{type:'bar',
+    data:{labels:top8.map(c=>c.name.length>10?c.name.substring(0,10)+'…':c.name),
+      datasets:[{data:top8.map(c=>Number(c.total_spent)),backgroundColor:'#4f46e5',borderRadius:6,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:600,easing:'easeInOutQuart'},
+      plugins:{legend:{display:false},tooltip:{...TT}},
+      scales:{x:SC,y:{grid:{display:false},ticks:{color:'rgba(15,23,42,0.45)',font:{family:'Cairo',size:10}}}}}});
+
+  // Chart 2: category donut
+  const tc={};customers.forEach(c=>{const t=CAT[c.type]||c.type||'غير محدد';tc[t]=(tc[t]||0)+1;});
+  const tk=Object.keys(tc);
+  if(chart2) chart2.destroy();
+  chart2=new Chart(document.getElementById('rptChart2').getContext('2d'),{type:'doughnut',
+    data:{labels:tk,datasets:[{data:tk.map(k=>tc[k]),backgroundColor:CC,borderColor:'#fff',borderWidth:4,hoverOffset:8}]},
+    options:{cutout:'72%',animation:{duration:650},
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'Cairo',size:10},color:'#1A2232',padding:7,boxWidth:9}},
+        tooltip:{...TT,callbacks:{}}},responsive:true,maintainAspectRatio:false}});
+
+  // Table
+  document.getElementById('rptHead').innerHTML='<th>العميل</th><th>الفئة</th><th>الهاتف</th><th style="text-align:center">الزيارات</th><th>آخر معاملة</th><th style="text-align:left">الإجمالي (IQD)</th>';
+  allRows=customers;
+  document.getElementById('tblSub').textContent=`${customers.length} عميل`;
+  document.getElementById('tblSearch').value='';
+  renderRows(customers,'customers');
+}
+
+/* ── Render table rows ────────────────────────────────── */
+function renderRows(rows, type) {
+  const b=document.getElementById('rptBody');
+  if(!rows.length){b.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد بيانات في هذه الفترة</td></tr>`;return;}
+  if(type==='sales'){
+    b.innerHTML=rows.map(inv=>`<tr onclick="location.href='manager-view.html?id=${inv.customer_id}'" style="cursor:pointer">
+      <td style="color:var(--text-sub);font-size:0.75rem">${new Date(inv.date).toLocaleDateString('ar-IQ',{year:'numeric',month:'short',day:'numeric'})}</td>
+      <td style="font-weight:800;font-size:0.8rem">${inv.customer_name}</td>
+      <td><span class="hs-badge">${CAT[inv.customer_type]||inv.customer_type||'—'}</span></td>
+      <td style="color:var(--text-sub);font-size:0.76rem">${inv.phone}</td>
+      <td style="text-align:left;font-weight:900;font-size:0.8rem">${Number(inv.total_amount).toLocaleString('en-US')}</td>
+    </tr>`).join('');
+  } else {
+    b.innerHTML=rows.map(c=>`<tr onclick="location.href='manager-view.html?id=${c.id}'" style="cursor:pointer">
+      <td style="font-weight:800;font-size:0.8rem">${c.name}</td>
+      <td><span class="hs-badge">${CAT[c.type]||c.type||'—'}</span></td>
+      <td style="color:var(--text-sub);font-size:0.76rem">${c.phone}</td>
+      <td style="text-align:center;font-weight:700;font-size:0.8rem">${c.visit_count}</td>
+      <td style="color:var(--text-sub);font-size:0.76rem">${c.last_transaction?new Date(c.last_transaction).toLocaleDateString('ar-IQ',{year:'numeric',month:'short',day:'numeric'}):'—'}</td>
+      <td style="text-align:left;font-weight:900;font-size:0.8rem">${Number(c.total_spent).toLocaleString('en-US')}</td>
+    </tr>`).join('');
+  }
+}
+
+/* ── Inline search ────────────────────────────────────── */
+function filterTable() {
+  const q=document.getElementById('tblSearch').value.trim().toLowerCase();
+  if(!q){renderRows(allRows,tab);return;}
+  renderRows(allRows.filter(r=>(r.customer_name||r.name||'').toLowerCase().includes(q)||(r.phone||'').includes(q)), tab);
+}
+
+/* ════════════════════════════════════════════════════════
+   PDF EXPORT — Native browser print engine (window.print)
+   No external libraries. The browser handles all Arabic
+   shaping, RTL bidi, ligatures, and pagination natively.
+
+   Flow:
+   1. Build report HTML into #pdf-print-surface
+   2. @media print CSS hides everything else, shows only that div
+   3. window.print() triggers the native Save-as-PDF dialog
+   4. afterprint event cleans up the DOM
+════════════════════════════════════════════════════════ */
+function exportPDF() {
+  if (!rptData) { alert('يرجى تحميل التقرير أولاً'); return; }
+
+  const from    = document.getElementById('rptFrom').value;
+  const to      = document.getElementById('rptTo').value;
+  const isSales = tab === 'sales';
+  const today   = new Date().toLocaleDateString('ar-IQ',
+                    { year:'numeric', month:'long', day:'numeric' });
+
+  /* ── 1. KPI summary from the live rendered DOM ── */
+  const kpiCards = [...document.querySelectorAll('#rptSummary .hs-card')];
+  const kpiHtml  = kpiCards.map(el => `
+    <div class="pdf-kpi">
+      <div class="pdf-kpi-lbl">${el.querySelector('.lbl')?.textContent?.trim() || ''}</div>
+      <div class="pdf-kpi-val">${el.querySelector('.val')?.textContent?.trim() || ''}</div>
+    </div>`).join('');
+
+  /* ── 2. Table markup ── */
+  let thHtml, tbHtml;
+  if (isSales) {
+    thHtml = `<tr>
+      <th>التاريخ</th><th>اسم العميل</th><th>الفئة</th>
+      <th>رقم الهاتف</th><th>الإجمالي (IQD)</th>
+    </tr>`;
+    tbHtml = (rptData.sales?.invoices || []).map(inv => `
+      <tr>
+        <td class="date">${new Date(inv.date).toLocaleDateString('ar-IQ')}</td>
+        <td>${inv.customer_name}</td>
+        <td>${CAT[inv.customer_type] || inv.customer_type || '—'}</td>
+        <td class="phone">${inv.phone}</td>
+        <td class="amount">${Number(inv.total_amount).toLocaleString('en-US')}</td>
+      </tr>`).join('');
+  } else {
+    thHtml = `<tr>
+      <th>اسم العميل</th><th>الفئة</th><th>رقم الهاتف</th>
+      <th>الزيارات</th><th>آخر معاملة</th><th>الإجمالي (IQD)</th>
+    </tr>`;
+    tbHtml = (rptData.customers || []).map(c => `
+      <tr>
+        <td>${c.name}</td>
+        <td>${CAT[c.type] || c.type || '—'}</td>
+        <td class="phone">${c.phone}</td>
+        <td class="num">${c.visit_count}</td>
+        <td class="date">${c.last_transaction
+            ? new Date(c.last_transaction).toLocaleDateString('ar-IQ') : '—'}</td>
+        <td class="amount">${Number(c.total_spent).toLocaleString('en-US')}</td>
+      </tr>`).join('');
+  }
+
+  /* ── 3. Populate print surface ── */
+  document.getElementById('pdf-print-surface').innerHTML = `
+    <div class="pdf-logo-wrap">
+      <img src="logoen.png" alt="Horeca Spot">
+    </div>
+    <div class="pdf-title">
+      ${isSales ? 'تقرير المبيعات' : 'تقرير العملاء'} — هوريكا سبوت
+    </div>
+    <div class="pdf-subtitle">
+      الفترة: ${from} &lrm;&larr;&lrm; ${to} &nbsp;|&nbsp; تاريخ الإصدار: ${today}
+    </div>
+    <div class="pdf-rule"></div>
+    <div class="pdf-kpis">${kpiHtml}</div>
+    <table>
+      <thead>${thHtml}</thead>
+      <tbody>${tbHtml}</tbody>
+    </table>
+    <div class="pdf-footer">
+      Horeca Spot CRM &nbsp;&bull;&nbsp; جميع الحقوق محفوظة &nbsp;&bull;&nbsp; ${today}
+    </div>`;
+
+  /* ── 4. Clean up after print dialog closes ── */
+  const cleanup = () => {
+    document.getElementById('pdf-print-surface').innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+
+  /* ── 5. Trigger native print / Save-as-PDF ── */
+  window.print();
+}
+
+/* ════════════════════════════════════════════════════════
+   EXCEL EXPORT — RTL, Arabic headers, Summary sheet
+════════════════════════════════════════════════════════ */
+function exportExcel() {
+  if(!rptData){ alert('يرجى تحميل التقرير أولاً'); return; }
+  const from=document.getElementById('rptFrom').value, to=document.getElementById('rptTo').value;
+
+  let rows;
+  if(tab==='sales'){
+    rows=[
+      ['التاريخ','اسم العميل','نوع العميل','رقم الهاتف','المبلغ الإجمالي (IQD)'],
+      ...(rptData.sales.invoices||[]).map(inv=>[
+        new Date(inv.date).toLocaleDateString('ar-IQ'),
+        inv.customer_name, CAT[inv.customer_type]||inv.customer_type||'—',
+        inv.phone, Number(inv.total_amount)
+      ])
+    ];
+  } else {
+    rows=[
+      ['اسم العميل','الفئة','رقم الهاتف','عدد الزيارات','تاريخ آخر معاملة','الإجمالي (IQD)'],
+      ...(rptData.customers||[]).map(c=>[
+        c.name, CAT[c.type]||c.type||'—', c.phone,
+        Number(c.visit_count),
+        c.last_transaction?new Date(c.last_transaction).toLocaleDateString('ar-IQ'):'—',
+        Number(c.total_spent)
+      ])
+    ];
+  }
+
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  if(!ws['!sheetView']) ws['!sheetView']=[{}];
+  ws['!sheetView'][0].rightToLeft=true;
+  ws['!cols']=rows[0].map(()=>({wch:22}));
+
+  // Summary sheet
+  const s=rptData.sales?.summary||{};
+  const sumRows=tab==='sales'
+    ?[['البيان','القيمة'],
+      ['إجمالي المبيعات (IQD)', s.total_sales||0],
+      ['عدد الفواتير', s.total_invoices||0],
+      ['متوسط الفاتورة (IQD)', Math.round(s.avg_invoice||0)],
+      ['عملاء فريدون', s.unique_customers||0],
+      ['الفترة', `${from} → ${to}`]]
+    :[['البيان','القيمة'],
+      ['إجمالي العملاء', rptData.customers?.length||0],
+      ['الفترة', `${from} → ${to}`]];
+  const wsSummary=XLSX.utils.aoa_to_sheet(sumRows);
+  if(!wsSummary['!sheetView']) wsSummary['!sheetView']=[{}];
+  wsSummary['!sheetView'][0].rightToLeft=true;
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, tab==='sales'?'المبيعات':'العملاء');
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'ملخص');
+  XLSX.writeFile(wb, `horeca-${tab}-${from}-${to}.xlsx`);
+}
+
+/* ── Init ─────────────────────────────────────────────── */
+loadReport();
+</script>
+</body>
+</html>

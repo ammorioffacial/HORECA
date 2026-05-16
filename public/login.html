@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | Horeca Spot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { indigo: '#4f46e5', 'indigo-light': '#6366f1' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .white-card { background: #ffffff; box-shadow: 0 4px 24px rgba(15,23,42,0.06), 0 20px 60px rgba(15,23,42,0.04); width: 100%; max-width: 420px; }
+        .input-style { border: 1.5px solid #e2e8f0; transition: all 0.3s ease; font-family: 'Cairo', 'Tajawal', sans-serif; }
+        .input-style:focus { border-color: #4f46e5; outline: none; box-shadow: 0 0 0 4px rgba(79,70,229,0.08); }
+        .gradient-btn { background: linear-gradient(135deg, #8A2E33 0%, #a83840 100%); transition: background 0.18s; }
+        .gradient-btn:hover { background: linear-gradient(135deg, #6e2323 0%, #8A2E33 100%); }
+    </style>
+</head>
+<body>
+    <div class="white-card rounded-[3rem] p-10 md:p-14 relative overflow-hidden">
+        <div class="text-center mb-10">
+            <img src="logoen.png" alt="Horeca Spot" class="h-14 w-auto mx-auto mb-10 object-contain">
+            <h2 class="text-3xl font-extrabold mb-2" style="color:#0f172a">تسجيل الدخول</h2>
+            <p class="font-medium text-sm" style="color:#94a3b8">مرحباً بك مجدداً في النظام</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div class="relative group">
+                <div class="absolute right-5 top-1/2 -translate-y-1/2 transition-colors" style="color:#cbd5e1">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <input type="text" id="username" placeholder="اسم المستخدم"
+                       class="input-style w-full py-5 pr-14 pl-6 rounded-2xl font-bold placeholder:font-normal" style="color:#0f172a" required>
+            </div>
+
+            <div class="relative group">
+                <div class="absolute right-5 top-1/2 -translate-y-1/2 transition-colors" style="color:#cbd5e1">
+                    <i data-lucide="lock" class="w-5 h-5"></i>
+                </div>
+                <input type="password" id="password" placeholder="كلمة المرور"
+                       class="input-style w-full py-5 pr-14 pl-14 rounded-2xl font-bold placeholder:font-normal" style="color:#0f172a" required>
+                <button type="button" onclick="togglePassword()" class="absolute left-5 top-1/2 -translate-y-1/2 transition-colors" style="color:#cbd5e1">
+                    <i data-lucide="eye" id="eyeIcon" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <button type="submit" id="submitBtn" class="gradient-btn w-full py-5 rounded-2xl text-white font-extrabold text-xl flex items-center justify-center gap-3 shadow-xl mt-4">
+                <span id="btnText">دخول للنظام</span>
+                <i data-lucide="log-in" class="w-6 h-6"></i>
+            </button>
+        </form>
+
+        <p id="msg" class="mt-8 text-center text-sm font-bold hidden px-4 py-3 rounded-xl"></p>
+    </div>
+
+    <script>
+        window.onload = function() { lucide.createIcons(); };
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            input.type = input.type === 'password' ? 'text' : 'password';
+            icon.setAttribute('data-lucide', input.type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        }
+
+        function showMsg(text, isError) {
+            const el = document.getElementById('msg');
+            el.textContent = text;
+            el.className = `mt-8 text-center text-sm font-bold px-4 py-3 rounded-xl ${isError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`;
+            el.classList.remove('hidden');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            btn.disabled = true;
+            btnText.textContent = 'جاري التحقق...';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showMsg(data.error || 'بيانات الدخول غير صحيحة', true);
+                    btn.disabled = false;
+                    btnText.textContent = 'دخول للنظام';
+                    return;
+                }
+
+                // Store token and role
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('username', data.username);
+
+                showMsg('تم الدخول بنجاح، جاري التحويل...', false);
+
+                setTimeout(() => {
+                    if (data.role === 'manager') {
+                        window.location.href = '/dashboard.html';
+                    } else {
+                        window.location.href = '/sales-entry.html';
+                    }
+                }, 600);
+
+            } catch (err) {
+                showMsg('تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً', true);
+                btn.disabled = false;
+                btnText.textContent = 'دخول للنظام';
+            }
+        });
+    </script>
+</body>
+</html>

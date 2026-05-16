@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تسجيل مبيعات | Horeca Spot</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --indigo:        #4f46e5;
+  --indigo-light:  #6366f1;
+  --indigo-soft:   rgba(99,102,241,0.08);
+  --emerald:       #10b981;
+  --text:          #0f172a;
+  --text-dim:      #94a3b8;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+  background: #f8fafc;
+  min-height: 100vh;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 1.5rem 1rem 2.5rem;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+/* ── Form card ───────────────────────────── */
+.form-card {
+  background: #fff;
+  border: 1px solid rgba(15,23,42,0.07);
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(15,23,42,0.05), 0 8px 32px rgba(15,23,42,0.04);
+  width: 100%; max-width: 620px;
+  padding: 1.75rem 1.75rem 2rem;
+}
+
+/* ── Field ───────────────────────────────── */
+.field {
+  width: 100%; background: #fff;
+  border: 1.5px solid rgba(15,23,42,0.11); border-radius: 0.85rem;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.9rem; font-weight: 700; color: #0f172a;
+  font-family: 'Cairo', sans-serif; outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.field:focus { border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79,70,229,0.08); }
+.field::placeholder { color: rgba(15,23,42,0.28); font-weight: 500; }
+select.field { cursor: pointer; }
+
+/* ── Item card ───────────────────────────── */
+.item-card {
+  background: rgba(15,23,42,0.02);
+  border: 1.5px solid rgba(15,23,42,0.07);
+  border-radius: 1.1rem;
+  padding: 0.9rem;
+  position: relative;
+  animation: fadeCard 0.26s ease;
+}
+@keyframes fadeCard { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
+
+.del-btn {
+  position: absolute; top: -8px; left: -8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #8A2E33; color: #fff; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 2px 6px rgba(138,46,51,0.32);
+  transition: background 0.16s; z-index: 1; line-height: 0;
+}
+.del-btn:hover { background: #6e2323; }
+
+/* ── Section label ───────────────────────── */
+.slabel {
+  font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.07em; color: rgba(15,23,42,0.3); margin-bottom: 0.55rem;
+}
+
+/* ── Add item btn ────────────────────────── */
+.add-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; font-weight: 800;
+  color: #4f46e5; background: rgba(79,70,229,0.08);
+  border: none; border-radius: 9999px;
+  padding: 0.38rem 0.9rem; cursor: pointer;
+  font-family: 'Cairo', sans-serif; transition: background 0.16s;
+}
+.add-btn:hover { background: rgba(79,70,229,0.14); }
+
+/* ── Total bar ───────────────────────────── */
+.total-bar {
+  background: linear-gradient(135deg, #8A2E33 0%, #a83840 100%);
+  border-radius: 1.25rem;
+  padding: 0.9rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 6px 20px rgba(138,46,51,0.28);
+}
+
+/* ── Submit btn ──────────────────────────── */
+.submit-btn {
+  width: 100%; background: linear-gradient(135deg, #1a7965 0%, #0f9d7e 100%);
+  border: none; border-radius: 1.25rem;
+  padding: 0.95rem; color: #fff;
+  font-size: 0.95rem; font-weight: 900; font-family: 'Cairo', sans-serif;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 5px 18px rgba(26,121,101,0.30);
+  transition: background 0.18s, transform 0.14s;
+  -webkit-tap-highlight-color: transparent;
+}
+.submit-btn:hover  { background: linear-gradient(135deg, #115c4c 0%, #1a7965 100%); }
+.submit-btn:active { transform: scale(0.98); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Toast ───────────────────────────────── */
+#toast {
+  position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+  z-index: 9999; padding: 0.7rem 1.4rem; border-radius: 0.9rem;
+  font-weight: 800; font-size: 0.78rem; text-align: center;
+  max-width: 320px; width: 90%;
+  box-shadow: 0 6px 20px rgba(33,43,62,0.14);
+  transition: opacity 0.28s, transform 0.28s;
+  font-family: 'Cairo', sans-serif;
+}
+#toast.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-8px); }
+#toast.ok  { background: #10B981; color: #fff; }
+#toast.err { background: #ef4444; color: #fff; }
+
+/* Grid 2-col */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media(max-width:420px){ .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="toast" class="hidden"></div>
+
+<div class="form-card">
+
+  <!-- Header -->
+  <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:1.5rem;gap:10px">
+    <img src="logoen.png" alt="Horeca Spot" style="height:32px;object-fit:contain">
+    <div style="text-align:center">
+      <h2 style="font-size:1.1rem;font-weight:900;color:#0f172a">فاتورة جديدة</h2>
+      <p style="font-size:0.62rem;font-weight:600;color:rgba(15,23,42,0.3);margin-top:2px">نظام إدارة مبيعات هوريكا سبوت</p>
+    </div>
+  </div>
+
+  <form id="salesForm">
+
+    <!-- Customer fields -->
+    <div style="margin-bottom:1.25rem">
+      <div class="slabel">بيانات الزبون</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <input id="custName"    type="text" class="field" placeholder="اسم الزبون" maxlength="16" required>
+        <div>
+          <input id="custPhone" type="tel" class="field" placeholder="رقم الهاتف (07...)"
+                 oninput="validatePhone(this)" maxlength="11" required>
+          <span id="phoneErr" style="display:none;font-size:0.62rem;font-weight:700;color:#ef4444;margin-top:4px;padding-right:4px"></span>
+        </div>
+        <div class="grid2">
+          <input id="custAddress" type="text" class="field" placeholder="العنوان (اختياري)"
+                 oninput="validateAddress(this)" maxlength="12">
+          <select id="custType" class="field">
+            <option value="" disabled selected>نوع الزبون</option>
+            <option value="normal">زبون عادي</option>
+            <option value="restaurant">صاحب مطعم</option>
+            <option value="shop">صاحب محل</option>
+            <option value="coffee">صاحب كوفي</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px solid rgba(33,43,62,0.06);margin-bottom:1.1rem"></div>
+
+    <!-- Items -->
+    <div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+        <div class="slabel" style="margin-bottom:0">المواد المشتراة</div>
+        <button type="button" class="add-btn" onclick="addItem()">
+          <i data-lucide="plus" style="width:12px;height:12px"></i> إضافة مادة
+        </button>
+      </div>
+      <div id="itemsContainer" style="display:flex;flex-direction:column;gap:8px">
+        <div class="item-card">
+          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+          <div style="display:flex;gap:7px">
+            <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+            <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total + submit -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="total-bar">
+        <span style="font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:.06em">الإجمالي الكلي</span>
+        <div style="display:flex;align-items:baseline;gap:5px">
+          <span id="totalDisplay" style="font-size:1.5rem;font-weight:900;color:#fff">0</span>
+          <span style="font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.7)">IQD</span>
+        </div>
+      </div>
+      <button type="submit" id="submitBtn" class="submit-btn">
+        <span id="btnText">حفظ الفاتورة</span>
+        <i data-lucide="check-square" style="width:18px;height:18px"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+lucide.createIcons();
+
+(function(){
+  const t=localStorage.getItem('token'), r=localStorage.getItem('role');
+  if(!t||r!=='employee') location.href='/login.html';
+})();
+
+/* Phone: digits only, max 11, must start with 07 */
+function validatePhone(el) {
+  /* Strip every non-digit character as the user types */
+  el.value = el.value.replace(/\D/g, '');
+  /* Hard-cap at 11 digits */
+  if (el.value.length > 11) el.value = el.value.slice(0, 11);
+
+  const err = document.getElementById('phoneErr');
+  if (el.value.length > 0 && !el.value.startsWith('07')) {
+    err.textContent = 'رقم الهاتف يجب أن يبدأ بـ 07';
+    err.style.display = 'block';
+    el.style.borderColor = '#ef4444';
+  } else if (el.value.length > 0 && el.value.length < 11) {
+    err.textContent = 'رقم الهاتف يجب أن يتكون من 11 رقماً';
+    err.style.display = 'block';
+    el.style.borderColor = '#f59e0b';
+  } else {
+    err.style.display = 'none';
+    el.style.borderColor = el.value.length === 11 ? '#10b981' : '';
+  }
+}
+
+/* Address: alphanumeric + spaces only, max 12 chars */
+function validateAddress(el) {
+  /* Remove anything that isn't a letter (Arabic/Latin), digit, or space */
+  el.value = el.value.replace(/[^\p{L}\p{N} ]/gu, '');
+  if (el.value.length > 12) el.value = el.value.slice(0, 12);
+}
+
+/* Enforce max 8 digits on price, max 3 digits (999) on qty */
+function clampPrice(el) {
+  if (el.value.length > 8) el.value = el.value.slice(0, 8);
+  if (parseFloat(el.value) < 0) el.value = '';
+}
+function clampQty(el) {
+  let v = parseInt(el.value);
+  if (isNaN(v) || v < 1) { el.value = 1; return; }
+  if (v > 999) el.value = 999;
+}
+
+function addItem() {
+  const el=document.createElement('div');
+  el.className='item-card';
+  el.innerHTML=`
+    <button type="button" class="del-btn" onclick="this.parentElement.remove();calcTotal()">
+      <i data-lucide="x" style="width:11px;height:11px"></i>
+    </button>
+    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+    <div style="display:flex;gap:7px">
+      <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+      <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
+    </div>`;
+  document.getElementById('itemsContainer').appendChild(el);
+  lucide.createIcons();
+}
+
+function calcTotal() {
+  let t=0;
+  document.querySelectorAll('.item-card').forEach(c=>{
+    t+=(parseFloat(c.querySelector('.item-price').value)||0)*
+       (parseInt(c.querySelector('.item-qty').value)||0);
+  });
+  document.getElementById('totalDisplay').textContent=t.toLocaleString('en-US');
+}
+
+function toast(msg, ok=true) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=ok?'ok':'err';
+  setTimeout(()=>el.className='hidden', 3400);
+}
+
+function resetForm() {
+  ['custName','custPhone','custAddress'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('phoneErr').style.display='none';
+  document.getElementById('custPhone').style.borderColor='';
+  document.getElementById('custType').selectedIndex=0;
+  document.getElementById('itemsContainer').innerHTML=`
+    <div class="item-card">
+      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="10" style="margin-bottom:7px" required>
+      <div style="display:flex;gap:7px">
+        <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+        <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
+      </div>
+    </div>`;
+  document.getElementById('totalDisplay').textContent='0';
+  lucide.createIcons();
+}
+
+document.getElementById('salesForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const btn=document.getElementById('submitBtn'), txt=document.getElementById('btnText');
+  btn.disabled=true; txt.textContent='جاري الحفظ...';
+
+  /* Phone gate: must be exactly 11 digits starting with 07 */
+  const phoneVal = document.getElementById('custPhone').value;
+  if (!/^07\d{9}$/.test(phoneVal)) {
+    toast('رقم الهاتف غير صحيح — يجب أن يبدأ بـ 07 ويتكون من 11 رقماً', false);
+    btn.disabled=false; txt.textContent='حفظ الفاتورة'; return;
+  }
+
+  const items=[]; let valid=true;
+  document.querySelectorAll('.item-card').forEach(c=>{
+    const n=c.querySelector('.item-name').value.trim();
+    const p=parseFloat(c.querySelector('.item-price').value);
+    const q=parseInt(c.querySelector('.item-qty').value);
+    if(!n||isNaN(p)||isNaN(q)||q<1){valid=false;return;}
+    items.push({name:n,price:p,qty:q});
+  });
+
+  if(!valid||!items.length){toast('يرجى التحقق من بيانات المواد',false);btn.disabled=false;txt.textContent='حفظ الفاتورة';return;}
+
+  try {
+    const res=await fetch('/api/sales',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`},
+      body:JSON.stringify({
+        name:document.getElementById('custName').value.trim(),
+        phone:document.getElementById('custPhone').value.trim(),
+        address:document.getElementById('custAddress').value.trim(),
+        type:document.getElementById('custType').value,
+        items
+      })
+    });
+    const d=await res.json();
+    if(!res.ok){toast(d.error||'فشل في حفظ الفاتورة',false);}
+    else{toast('✓ تم حفظ الفاتورة بنجاح!',true);resetForm();}
+  } catch(_){toast('تعذر الاتصال بالخادم',false);}
+  finally{btn.disabled=false;txt.textContent='حفظ الفاتورة';}
+});
+</script>
+</body>
+</html>

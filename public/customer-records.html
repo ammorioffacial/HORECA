@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>قاعدة العملاء | Horeca Spot</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+.filter-bar {
+  display:flex; flex-wrap:wrap; align-items:center; gap:7px;
+  padding:0.85rem 1.1rem;
+  background:rgba(15,23,42,0.02);
+  border-bottom:1px solid var(--border);
+}
+.filter-bar input, .filter-bar select {
+  background:transparent; border:none; outline:none;
+  font-size:0.74rem; font-weight:700; color:var(--text);
+  font-family:'Cairo',sans-serif;
+}
+.filter-bar input::placeholder { color:var(--text-dim); font-weight:500; }
+.filter-bar select { color:var(--text-sub); cursor:pointer; }
+.fdivider { width:1px; height:18px; background:var(--border); }
+.filter-group { display:flex; align-items:center; gap:5px; }
+.filter-label { font-size:0.65rem; font-weight:700; color:var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="hs-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ════ SIDEBAR ════════════════════════════════════════ -->
+<aside class="hs-sidebar" id="sidebar">
+  <div class="hs-sidebar__logo">
+    <img src="logoen.png" alt="Horeca Spot">
+    <button class="hs-sidebar__close" onclick="closeSidebar()">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+  <div class="hs-sidebar__status">
+    <span class="hs-sidebar__status-dot"></span><span>النظام يعمل</span>
+  </div>
+  <nav class="hs-nav">
+    <a href="dashboard.html" class="hs-nav__link">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>لوحة التحكم</span>
+    </a>
+    <a href="customer-records.html" class="hs-nav__link active">
+      <i data-lucide="users" class="w-4 h-4"></i><span>قاعدة العملاء</span>
+    </a>
+    <a href="reports.html" class="hs-nav__link">
+      <i data-lucide="bar-chart-2" class="w-4 h-4"></i><span>التقارير المتقدمة</span>
+    </a>
+  </nav>
+  <div class="hs-sidebar__user">
+    <div class="hs-sidebar__avatar" id="sidebarInitial">M</div>
+    <div>
+      <div class="hs-sidebar__uname" id="sidebarUsername">المدير</div>
+      <div class="hs-sidebar__urole">Manager · Horeca Spot</div>
+    </div>
+  </div>
+  <button class="hs-sidebar__logout" onclick="logout()">
+    <i data-lucide="log-out" class="w-4 h-4"></i><span>تسجيل الخروج</span>
+  </button>
+</aside>
+
+<header class="hs-topbar">
+  <button class="hs-topbar__burger" onclick="openSidebar()">
+    <i data-lucide="menu" class="w-4 h-4" style="color:#fff"></i>
+  </button>
+  <img src="logoen.png" class="hs-topbar__logo" alt="Horeca Spot">
+  <div style="width:36px"></div>
+</header>
+
+<!-- ════ MAIN ════════════════════════════════════════════ -->
+<main class="hs-main">
+
+  <header style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:1rem" class="hs-au hs-d1">
+    <div>
+      <h1 style="font-size:1.35rem;font-weight:900;color:var(--text)">قاعدة العملاء</h1>
+      <p style="font-size:0.65rem;font-weight:700;color:var(--text-dim);margin-top:2px">إدارة وتحليل بيانات العملاء المسجلين</p>
+    </div>
+    <span id="customerCount" style="font-size:0.72rem;font-weight:800;padding:4px 14px;border-radius:9999px;background:var(--indigo-soft);color:var(--indigo)">— عميل</span>
+  </header>
+
+  <div class="hs-card hs-au hs-d2" style="overflow:hidden">
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <i data-lucide="search" style="width:13px;height:13px;color:var(--text-dim)"></i>
+        <input id="searchName" type="text" placeholder="ابحث بالاسم أو الهاتف..." style="width:160px">
+      </div>
+      <div class="fdivider"></div>
+      <div class="filter-group">
+        <i data-lucide="calendar" style="width:13px;height:13px;color:var(--text-dim)"></i>
+        <input id="dateFrom" type="date" class="hs-date" style="border:none;padding:0;font-size:0.72rem;background:transparent">
+        <span class="filter-label">إلى</span>
+        <input id="dateTo" type="date" class="hs-date" style="border:none;padding:0;font-size:0.72rem;background:transparent">
+      </div>
+      <div class="fdivider"></div>
+      <select id="filterType" style="font-size:0.72rem">
+        <option value="">كل الفئات</option>
+        <option value="restaurant">مطعم</option>
+        <option value="coffee">كوفي</option>
+        <option value="shop">محل</option>
+        <option value="normal">عادي</option>
+      </select>
+      <div style="flex:1"></div>
+      <button onclick="applyFilters()" class="hs-pill active" style="display:flex;align-items:center;gap:4px">
+        <i data-lucide="filter" style="width:11px;height:11px"></i> فلترة
+      </button>
+      <button onclick="resetFilters()" class="hs-pill" style="display:flex;align-items:center;gap:4px">
+        <i data-lucide="rotate-ccw" style="width:11px;height:11px"></i>
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table class="hs-table">
+        <thead><tr>
+          <th>العميل</th>
+          <th>الفئة</th>
+          <th>رقم الهاتف</th>
+          <th>آخر عملية</th>
+          <th style="text-align:center">الزيارات</th>
+          <th style="text-align:left">الإجمالي (IQD)</th>
+        </tr></thead>
+        <tbody id="customersBody">
+          <tr><td colspan="6" style="text-align:center;padding:2rem">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:7px">
+              <div class="hs-skel" style="width:190px;height:11px"></div>
+              <div class="hs-skel" style="width:150px;height:11px"></div>
+              <div class="hs-skel" style="width:170px;height:11px"></div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<nav class="hs-botnav">
+  <a href="dashboard.html" class="hs-botnav__item">
+    <i data-lucide="layout-dashboard"></i><span>الرئيسية</span>
+  </a>
+  <a href="customer-records.html" class="hs-botnav__item active">
+    <i data-lucide="users"></i><span>العملاء</span>
+  </a>
+  <a href="reports.html" class="hs-botnav__item">
+    <i data-lucide="bar-chart-2"></i><span>تقارير</span>
+  </a>
+  <button class="hs-botnav__item" onclick="logout()" style="color:rgba(244,63,94,0.5)">
+    <i data-lucide="log-out"></i><span>خروج</span>
+  </button>
+</nav>
+
+<script>
+lucide.createIcons();
+const token = localStorage.getItem('token');
+if (!token || localStorage.getItem('role') !== 'manager') location.href = '/login.html';
+const uname = localStorage.getItem('username') || 'المدير';
+document.getElementById('sidebarUsername').textContent = uname;
+document.getElementById('sidebarInitial').textContent  = uname.charAt(0).toUpperCase();
+function logout()       { localStorage.clear(); location.href = '/login.html'; }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open');    document.getElementById('overlay').classList.add('visible'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('visible'); }
+
+const TL = {restaurant:'مطعم',coffee:'كوفي',shop:'محل',normal:'عادي'};
+const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('ar-IQ',{year:'numeric',month:'short',day:'numeric'}) : '—';
+
+function resetFilters() {
+  ['searchName','dateFrom','dateTo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filterType').value='';
+  load({});
+}
+
+async function load(params={}) {
+  const qs=new URLSearchParams();
+  if(params.search) qs.set('search',params.search);
+  if(params.type)   qs.set('type',  params.type);
+  if(params.from)   qs.set('from',  params.from);
+  if(params.to)     qs.set('to',    params.to);
+
+  const tb=document.getElementById('customersBody');
+  tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.75rem">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:7px">
+      <div class="hs-skel" style="width:170px;height:11px"></div>
+      <div class="hs-skel" style="width:120px;height:11px"></div>
+    </div></td></tr>`;
+
+  try {
+    const res=await fetch(`/api/customers?${qs}`,{headers:{'Authorization':`Bearer ${token}`}});
+    if(res.status===401||res.status===403){logout();return;}
+    const customers=await res.json();
+    document.getElementById('customerCount').textContent=`${customers.length} عميل`;
+
+    if(!customers.length){
+      tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد نتائج</td></tr>`;
+      return;
+    }
+    tb.innerHTML=customers.map(c=>`
+      <tr onclick="location.href='manager-view.html?id=${c.id}'" style="cursor:pointer">
+        <td>
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--indigo-soft);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.6rem;flex-shrink:0">
+              ${c.name.trim().substring(0,2).toUpperCase()}
+            </div>
+            <div>
+              <div style="font-weight:800;font-size:0.8rem;color:var(--text)">${c.name}</div>
+              <div style="font-size:0.6rem;color:var(--text-dim)">${c.address||''}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="hs-badge">${TL[c.type]||c.type||'—'}</span></td>
+        <td style="color:var(--text-sub);font-size:0.76rem;font-weight:600">${c.phone}</td>
+        <td style="color:var(--text-sub);font-size:0.76rem;font-weight:600">${fmtDate(c.last_transaction)}</td>
+        <td style="text-align:center;font-weight:700;font-size:0.78rem;color:var(--text)">${c.visit_count}</td>
+        <td style="text-align:left;font-weight:900;font-size:0.8rem;color:var(--text)">${Number(c.total_spent).toLocaleString('en-US')}</td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('customersBody').innerHTML=
+      `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#ef4444;font-weight:700;font-size:0.76rem">فشل في تحميل البيانات</td></tr>`;
+  }
+}
+
+function applyFilters() {
+  load({
+    search: document.getElementById('searchName').value.trim(),
+    type:   document.getElementById('filterType').value,
+    from:   document.getElementById('dateFrom').value,
+    to:     document.getElementById('dateTo').value
+  });
+}
+document.getElementById('searchName').addEventListener('keydown', e=>{ if(e.key==='Enter') applyFilters(); });
+load();
+</script>
+</body>
+</html>
