@@ -13,10 +13,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Customers table (one record per unique phone number)
+-- phone is NULLABLE — customers without a phone are allowed.
+-- PostgreSQL treats each NULL as distinct, so UNIQUE still works correctly
+-- when multiple phone-less customers exist.
 CREATE TABLE IF NOT EXISTS customers (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
-  phone VARCHAR(20) UNIQUE NOT NULL,
+  phone VARCHAR(20) UNIQUE,          -- nullable: NULL allowed, NULLs are not compared equal in UNIQUE
   address TEXT,
   type VARCHAR(50),
   created_at TIMESTAMPTZ DEFAULT NOW()

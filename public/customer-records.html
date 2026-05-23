@@ -214,7 +214,7 @@ async function load(params={}) {
           </div>
         </td>
         <td><span class="hs-badge">${TL[c.type]||c.type||'—'}</span></td>
-        <td style="color:var(--text-sub);font-size:0.76rem;font-weight:600">${c.phone}</td>
+        <td style="color:var(--text-sub);font-size:0.76rem;font-weight:600">${c.phone || '<span style="color:var(--text-dim);font-style:italic">غير متوفر</span>'}</td>
         <td style="color:var(--text-sub);font-size:0.76rem;font-weight:600">${fmtDate(c.last_transaction)}</td>
         <td style="text-align:center;font-weight:700;font-size:0.78rem;color:var(--text)">${c.visit_count}</td>
         <td style="text-align:left;font-weight:900;font-size:0.8rem;color:var(--text)">${Number(c.total_spent).toLocaleString('en-US')}</td>

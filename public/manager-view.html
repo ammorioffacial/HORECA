@@ -329,7 +329,9 @@ function printStatement() {
   const name     = document.getElementById('profileName').textContent;
   const type     = document.getElementById('profileType').textContent;
   const initials = document.getElementById('profileInitials').textContent;
-  const phone    = document.getElementById('profilePhone').textContent.trim();
+  /* Strip the icon text — grab only the visible text node content */
+  const phoneRaw = document.getElementById('profilePhone').textContent.trim();
+  const phone    = phoneRaw || 'غير متوفر';
   const address  = document.getElementById('profileAddress').textContent.trim();
   const total    = document.getElementById('statTotal').textContent;
   const visits   = document.getElementById('statVisits').textContent;
@@ -420,10 +422,21 @@ async function loadProfile() {
     document.getElementById('profileType').textContent=TL[c.type]||c.type||'—';
 
     if(c.address) document.getElementById('profileAddress').innerHTML=`<i data-lucide="map-pin" style="width:13px;height:13px"></i> ${c.address}`;
-    document.getElementById('profilePhone').innerHTML=`<i data-lucide="phone" style="width:13px;height:13px"></i> ${c.phone}`;
 
-    const raw=c.phone.replace(/\D/g,'');
-    document.getElementById('whatsappBtn').href=`https://wa.me/${raw.startsWith('0')?'964'+raw.slice(1):raw}`;
+    const hasPhone = c.phone && c.phone.trim();
+    document.getElementById('profilePhone').innerHTML = hasPhone
+      ? `<i data-lucide="phone" style="width:13px;height:13px"></i> ${c.phone}`
+      : `<i data-lucide="phone-off" style="width:13px;height:13px;opacity:0.4"></i> <span style="color:var(--text-dim);font-style:italic">غير متوفر</span>`;
+
+    /* WhatsApp button — hide entirely when no phone */
+    const waBtn = document.getElementById('whatsappBtn');
+    if (hasPhone) {
+      const raw = c.phone.replace(/\D/g, '');
+      waBtn.href = `https://wa.me/${raw.startsWith('0') ? '964' + raw.slice(1) : raw}`;
+      waBtn.style.display = '';
+    } else {
+      waBtn.style.display = 'none';
+    }
 
     document.getElementById('statTotal').textContent=Number(c.total_spent).toLocaleString('en-US');
     document.getElementById('statVisits').textContent=c.visit_count;

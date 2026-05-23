@@ -155,8 +155,8 @@ select.field { cursor: pointer; }
       <div style="display:flex;flex-direction:column;gap:9px">
         <input id="custName"    type="text" class="field" placeholder="اسم الزبون" maxlength="16" required>
         <div>
-          <input id="custPhone" type="tel" class="field" placeholder="رقم الهاتف (07...)"
-                 oninput="validatePhone(this)" maxlength="11" required>
+          <input id="custPhone" type="tel" class="field" placeholder="رقم الهاتف (07...) - اختياري"
+                 oninput="validatePhone(this)" maxlength="11">
           <span id="phoneErr" style="display:none;font-size:0.62rem;font-weight:700;color:#ef4444;margin-top:4px;padding-right:4px"></span>
         </div>
         <div class="grid2">
@@ -185,9 +185,9 @@ select.field { cursor: pointer; }
       </div>
       <div id="itemsContainer" style="display:flex;flex-direction:column;gap:8px">
         <div class="item-card">
-          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
+          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
           <div style="display:flex;gap:7px">
-            <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+            <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
             <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
           </div>
         </div>
@@ -220,7 +220,7 @@ lucide.createIcons();
   if(!t||r!=='employee') location.href='/login.html';
 })();
 
-/* Phone: digits only, max 11, must start with 07 */
+/* Phone: optional — digits only, max 11, must start with 07 (only if non-empty) */
 function validatePhone(el) {
   /* Strip every non-digit character as the user types */
   el.value = el.value.replace(/\D/g, '');
@@ -228,17 +228,23 @@ function validatePhone(el) {
   if (el.value.length > 11) el.value = el.value.slice(0, 11);
 
   const err = document.getElementById('phoneErr');
-  if (el.value.length > 0 && !el.value.startsWith('07')) {
+  /* If empty, field is optional — clear any error */
+  if (el.value.length === 0) {
+    err.style.display = 'none';
+    el.style.borderColor = '';
+    return;
+  }
+  if (!el.value.startsWith('07')) {
     err.textContent = 'رقم الهاتف يجب أن يبدأ بـ 07';
     err.style.display = 'block';
     el.style.borderColor = '#ef4444';
-  } else if (el.value.length > 0 && el.value.length < 11) {
+  } else if (el.value.length < 11) {
     err.textContent = 'رقم الهاتف يجب أن يتكون من 11 رقماً';
     err.style.display = 'block';
     el.style.borderColor = '#f59e0b';
   } else {
     err.style.display = 'none';
-    el.style.borderColor = el.value.length === 11 ? '#10b981' : '';
+    el.style.borderColor = '#10b981';
   }
 }
 
@@ -248,9 +254,23 @@ function validateAddress(el) {
   if (el.value.length > 22) el.value = el.value.slice(0, 22);
 }
 
-/* Enforce max 8 digits on price, max 3 digits (999) on qty */
+/* Item name: Arabic letters, English letters, digits, spaces only — max 50 chars */
+function validateItemName(el) {
+  el.value = el.value.replace(/[^؀-ۿa-zA-Z0-9 ]/g, '');
+  if (el.value.length > 50) el.value = el.value.slice(0, 50);
+}
+
+/* Price: allow decimals, block negatives, cap integer part at 8 digits */
 function clampPrice(el) {
-  if (el.value.length > 8) el.value = el.value.slice(0, 8);
+  /* Remove any character that isn't a digit or a single decimal point */
+  el.value = el.value.replace(/[^0-9.]/g, '');
+  /* Keep only the first decimal point */
+  const parts = el.value.split('.');
+  if (parts.length > 2) el.value = parts[0] + '.' + parts.slice(1).join('');
+  /* Cap the integer part at 8 digits */
+  const newParts = el.value.split('.');
+  if (newParts[0].length > 8) newParts[0] = newParts[0].slice(0, 8);
+  el.value = newParts.join('.');
   if (parseFloat(el.value) < 0) el.value = '';
 }
 function clampQty(el) {
@@ -266,9 +286,9 @@ function addItem() {
     <button type="button" class="del-btn" onclick="this.parentElement.remove();calcTotal()">
       <i data-lucide="x" style="width:11px;height:11px"></i>
     </button>
-    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
+    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
     <div style="display:flex;gap:7px">
-      <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+      <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
       <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
     </div>`;
   document.getElementById('itemsContainer').appendChild(el);
@@ -276,12 +296,16 @@ function addItem() {
 }
 
 function calcTotal() {
-  let t=0;
-  document.querySelectorAll('.item-card').forEach(c=>{
-    t+=(parseFloat(c.querySelector('.item-price').value)||0)*
-       (parseInt(c.querySelector('.item-qty').value)||0);
+  let t = 0;
+  document.querySelectorAll('.item-card').forEach(c => {
+    /* parseFloat('444123.') → 444123  |  parseFloat('') → NaN → 0  |  parseFloat('.') → NaN → 0 */
+    const price = parseFloat(c.querySelector('.item-price').value) || 0;
+    const qty   = parseInt(c.querySelector('.item-qty').value)     || 0;
+    t += price * qty;
   });
-  document.getElementById('totalDisplay').textContent=t.toLocaleString('en-US');
+  /* Round to 2 decimal places to avoid floating-point drift (e.g. 0.1+0.2) */
+  t = Math.round(t * 100) / 100;
+  document.getElementById('totalDisplay').textContent = t.toLocaleString('en-US');
 }
 
 function toast(msg, ok=true) {
@@ -297,9 +321,9 @@ function resetForm() {
   document.getElementById('custType').selectedIndex=0;
   document.getElementById('itemsContainer').innerHTML=`
     <div class="item-card">
-      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="22" style="margin-bottom:7px" required>
+      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
       <div style="display:flex;gap:7px">
-        <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
+        <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
         <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
       </div>
     </div>`;
@@ -312,20 +336,22 @@ document.getElementById('salesForm').addEventListener('submit', async e=>{
   const btn=document.getElementById('submitBtn'), txt=document.getElementById('btnText');
   btn.disabled=true; txt.textContent='جاري الحفظ...';
 
-  /* Phone gate: must be exactly 11 digits starting with 07 */
+  /* Phone gate: optional — only validate if non-empty */
   const phoneVal = document.getElementById('custPhone').value;
-  if (!/^07\d{9}$/.test(phoneVal)) {
+  if (phoneVal && !/^07\d{9}$/.test(phoneVal)) {
     toast('رقم الهاتف غير صحيح — يجب أن يبدأ بـ 07 ويتكون من 11 رقماً', false);
     btn.disabled=false; txt.textContent='حفظ الفاتورة'; return;
   }
 
   const items=[]; let valid=true;
   document.querySelectorAll('.item-card').forEach(c=>{
-    const n=c.querySelector('.item-name').value.trim();
-    const p=parseFloat(c.querySelector('.item-price').value);
-    const q=parseInt(c.querySelector('.item-qty').value);
-    if(!n||isNaN(p)||isNaN(q)||q<1){valid=false;return;}
-    items.push({name:n,price:p,qty:q});
+    const n = c.querySelector('.item-name').value.trim();
+    /* parseFloat handles trailing dots gracefully: '444.' → 444 */
+    const p = parseFloat(c.querySelector('.item-price').value);
+    const q = parseInt(c.querySelector('.item-qty').value);
+    if (!n || isNaN(p) || p <= 0 || isNaN(q) || q < 1) { valid=false; return; }
+    /* Store rounded price to avoid sending '444.' strings to the server */
+    items.push({ name: n, price: Math.round(p * 100) / 100, qty: q });
   });
 
   if(!valid||!items.length){toast('يرجى التحقق من بيانات المواد',false);btn.disabled=false;txt.textContent='حفظ الفاتورة';return;}
@@ -345,7 +371,10 @@ document.getElementById('salesForm').addEventListener('submit', async e=>{
     const d=await res.json();
     if(!res.ok){toast(d.error||'فشل في حفظ الفاتورة',false);}
     else{toast('✓ تم حفظ الفاتورة بنجاح!',true);resetForm();}
-  } catch(_){toast('تعذر الاتصال بالخادم',false);}
+  } catch(err){
+    console.error('[sales submit]', err);
+    toast('تعذر الاتصال بالخادم: ' + err.message, false);
+  }
   finally{btn.disabled=false;txt.textContent='حفظ الفاتورة';}
 });
 </script>
