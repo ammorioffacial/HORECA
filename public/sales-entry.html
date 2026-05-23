@@ -187,7 +187,7 @@ select.field { cursor: pointer; }
         <div class="item-card">
           <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
           <div style="display:flex;gap:7px">
-            <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
+            <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
             <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
           </div>
         </div>
@@ -260,18 +260,25 @@ function validateItemName(el) {
   if (el.value.length > 50) el.value = el.value.slice(0, 50);
 }
 
-/* Price: allow decimals, block negatives, cap integer part at 8 digits */
+/* Price: stored as raw string — allows smooth typing of trailing dot (e.g. "5656.")
+   type="text" + inputmode="decimal" avoids browser number-field interference     */
 function clampPrice(el) {
-  /* Remove any character that isn't a digit or a single decimal point */
-  el.value = el.value.replace(/[^0-9.]/g, '');
-  /* Keep only the first decimal point */
-  const parts = el.value.split('.');
-  if (parts.length > 2) el.value = parts[0] + '.' + parts.slice(1).join('');
-  /* Cap the integer part at 8 digits */
-  const newParts = el.value.split('.');
-  if (newParts[0].length > 8) newParts[0] = newParts[0].slice(0, 8);
-  el.value = newParts.join('.');
-  if (parseFloat(el.value) < 0) el.value = '';
+  /* 1. Strip everything except digits and dot */
+  let val = el.value.replace(/[^0-9.]/g, '');
+  /* 2. Collapse multiple dots — keep only the first */
+  const dotIdx = val.indexOf('.');
+  if (dotIdx !== -1) {
+    val = val.slice(0, dotIdx + 1) + val.slice(dotIdx + 1).replace(/\./g, '');
+  }
+  /* 3. Cap integer part at 8 digits (before the dot) */
+  const intPart = dotIdx !== -1 ? val.slice(0, dotIdx) : val;
+  if (intPart.length > 8) {
+    val = dotIdx !== -1
+      ? intPart.slice(0, 8) + val.slice(dotIdx)
+      : intPart.slice(0, 8);
+  }
+  /* 4. Write back only when different — prevents cursor jump */
+  if (el.value !== val) el.value = val;
 }
 function clampQty(el) {
   let v = parseInt(el.value);
@@ -288,7 +295,7 @@ function addItem() {
     </button>
     <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
     <div style="display:flex;gap:7px">
-      <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
+      <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
       <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
     </div>`;
   document.getElementById('itemsContainer').appendChild(el);
@@ -298,13 +305,12 @@ function addItem() {
 function calcTotal() {
   let t = 0;
   document.querySelectorAll('.item-card').forEach(c => {
-    /* parseFloat('444123.') → 444123  |  parseFloat('') → NaN → 0  |  parseFloat('.') → NaN → 0 */
+    /* parseFloat safely handles trailing dot: '5656.' → 5656, '' → NaN → 0 */
     const price = parseFloat(c.querySelector('.item-price').value) || 0;
-    const qty   = parseInt(c.querySelector('.item-qty').value)     || 0;
+    const qty   = parseInt(c.querySelector('.item-qty').value,10)  || 0;
     t += price * qty;
   });
-  /* Round to 2 decimal places to avoid floating-point drift (e.g. 0.1+0.2) */
-  t = Math.round(t * 100) / 100;
+  /* No division — 5656 × 1 = 5656, always. Display as-is. */
   document.getElementById('totalDisplay').textContent = t.toLocaleString('en-US');
 }
 
@@ -323,7 +329,7 @@ function resetForm() {
     <div class="item-card">
       <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
       <div style="display:flex;gap:7px">
-        <input type="number" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" step="any" required>
+        <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
         <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
       </div>
     </div>`;
@@ -350,8 +356,7 @@ document.getElementById('salesForm').addEventListener('submit', async e=>{
     const p = parseFloat(c.querySelector('.item-price').value);
     const q = parseInt(c.querySelector('.item-qty').value);
     if (!n || isNaN(p) || p <= 0 || isNaN(q) || q < 1) { valid=false; return; }
-    /* Store rounded price to avoid sending '444.' strings to the server */
-    items.push({ name: n, price: Math.round(p * 100) / 100, qty: q });
+    items.push({ name: n, price: p, qty: q });
   });
 
   if(!valid||!items.length){toast('يرجى التحقق من بيانات المواد',false);btn.disabled=false;txt.textContent='حفظ الفاتورة';return;}
