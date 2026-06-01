@@ -99,7 +99,7 @@ router.get('/:id', verifyToken, requireRole('manager'), async (req, res) => {
 
     // Full invoice history
     const invoicesResult = await pool.query(`
-      SELECT id, items_json, total_amount, date
+      SELECT id, items_json, total_amount, date, invoice_image_url
       FROM invoices
       WHERE customer_id = $1
       ORDER BY date DESC

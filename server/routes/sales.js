@@ -7,7 +7,7 @@ const router = express.Router();
 // POST /api/sales — Employee only
 // Creates or reuses a customer, then saves the invoice
 router.post('/', verifyToken, requireRole('employee'), async (req, res) => {
-  const { name, phone, address, type, items } = req.body;
+  const { name, phone, address, type, items, invoice_image_url } = req.body;
 
   // Only name and at least one item are required — phone is optional
   if (!name || !name.trim()) {
@@ -72,10 +72,12 @@ router.post('/', verifyToken, requireRole('employee'), async (req, res) => {
       qty:   parseInt(item.qty, 10),
     }));
 
+    const imageUrl = (invoice_image_url && typeof invoice_image_url === 'string') ? invoice_image_url.trim() : null;
+
     await client.query(
-      `INSERT INTO invoices (customer_id, items_json, total_amount)
-       VALUES ($1, $2, $3)`,
-      [customerId, JSON.stringify(cleanItems), total]
+      `INSERT INTO invoices (customer_id, items_json, total_amount, invoice_image_url)
+       VALUES ($1, $2, $3, $4)`,
+      [customerId, JSON.stringify(cleanItems), total, imageUrl]
     );
 
     await client.query('COMMIT');

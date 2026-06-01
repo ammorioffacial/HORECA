@@ -6,6 +6,7 @@
 <title>تسجيل مبيعات | Horeca Spot</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -130,6 +131,21 @@ select.field { cursor: pointer; }
 /* Grid 2-col */
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media(max-width:420px){ .grid2 { grid-template-columns: 1fr; } }
+
+/* ── Image upload ─────────────────────────────── */
+.img-upload-label {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; width: 100%;
+  border: 1.5px dashed rgba(79,70,229,0.35);
+  border-radius: 0.85rem; padding: 0.75rem 1rem;
+  cursor: pointer; background: rgba(79,70,229,0.03);
+  font-size: 0.78rem; font-weight: 700; color: rgba(15,23,42,0.4);
+  font-family: 'Cairo', sans-serif;
+  transition: border-color 0.18s, background 0.18s;
+}
+.img-upload-label:hover { border-color: #4f46e5; background: rgba(79,70,229,0.07); color: #4f46e5; }
+.img-upload-label.has-file { border-style: solid; border-color: #10b981; background: rgba(16,185,129,0.05); color: #10b981; }
+#imgPreview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 0.75rem; display: none; margin-top: 6px; border: 1px solid rgba(15,23,42,0.07); }
 </style>
 </head>
 <body>
@@ -185,13 +201,24 @@ select.field { cursor: pointer; }
       </div>
       <div id="itemsContainer" style="display:flex;flex-direction:column;gap:8px">
         <div class="item-card">
-          <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
+          <input type="text" placeholder="اسم المادة" class="item-name field" style="margin-bottom:7px" required>
           <div style="display:flex;gap:7px">
             <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
             <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Invoice image upload -->
+    <div style="margin-bottom:1.25rem">
+      <div class="slabel">صورة الفاتورة (اختياري)</div>
+      <label for="invoiceImage" class="img-upload-label" id="imgLabel">
+        <i data-lucide="camera" style="width:15px;height:15px"></i>
+        <span id="imgLabelText">اضغط لرفع صورة الفاتورة</span>
+      </label>
+      <input id="invoiceImage" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+      <img id="imgPreview" alt="معاينة الصورة">
     </div>
 
     <!-- Total + submit -->
@@ -220,72 +247,86 @@ lucide.createIcons();
   if(!t||r!=='employee') location.href='/login.html';
 })();
 
-/* Phone: optional — digits only, max 11, must start with 07 (only if non-empty) */
-function validatePhone(el) {
-  /* Strip every non-digit character as the user types */
-  el.value = el.value.replace(/\D/g, '');
-  /* Hard-cap at 11 digits */
-  if (el.value.length > 11) el.value = el.value.slice(0, 11);
+/* ── Supabase client — replace with your project values ─────────────────── */
+const SUPABASE_URL    = 'https://YOUR_PROJECT_REF.supabase.co';
+const SUPABASE_ANON   = 'YOUR_ANON_PUBLIC_KEY';
+const STORAGE_BUCKET  = 'invoice-images';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  const err = document.getElementById('phoneErr');
-  /* If empty, field is optional — clear any error */
-  if (el.value.length === 0) {
-    err.style.display = 'none';
-    el.style.borderColor = '';
+/* ── Image selection preview ─────────────────────────────────────────────── */
+function handleImageSelect(input) {
+  const file = input.files[0];
+  const label = document.getElementById('imgLabel');
+  const labelText = document.getElementById('imgLabelText');
+  const preview = document.getElementById('imgPreview');
+  if (!file) {
+    label.classList.remove('has-file');
+    labelText.textContent = 'اضغط لرفع صورة الفاتورة';
+    preview.style.display = 'none';
     return;
   }
-  if (!el.value.startsWith('07')) {
-    err.textContent = 'رقم الهاتف يجب أن يبدأ بـ 07';
-    err.style.display = 'block';
-    el.style.borderColor = '#ef4444';
-  } else if (el.value.length < 11) {
-    err.textContent = 'رقم الهاتف يجب أن يتكون من 11 رقماً';
-    err.style.display = 'block';
-    el.style.borderColor = '#f59e0b';
-  } else {
-    err.style.display = 'none';
-    el.style.borderColor = '#10b981';
-  }
+  label.classList.add('has-file');
+  labelText.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+  reader.readAsDataURL(file);
 }
 
-/* Address: Arabic letters, English letters, digits, spaces only — max 22 chars */
+/* ── Upload image to Supabase Storage, return public URL ────────────────── */
+async function uploadInvoiceImage(file) {
+  if (!file) return null;
+  const ext  = file.name.split('.').pop();
+  const path = `invoices/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await _supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type
+  });
+  if (error) throw new Error('فشل رفع الصورة: ' + error.message);
+  const { data } = _supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/* ── Phone validation ───────────────────────────────────────────────────── */
+function validatePhone(el) {
+  el.value = el.value.replace(/\D/g, '');
+  if (el.value.length > 11) el.value = el.value.slice(0, 11);
+  const err = document.getElementById('phoneErr');
+  if (el.value.length === 0) { err.style.display='none'; el.style.borderColor=''; return; }
+  if (!el.value.startsWith('07')) {
+    err.textContent='رقم الهاتف يجب أن يبدأ بـ 07'; err.style.display='block'; el.style.borderColor='#ef4444';
+  } else if (el.value.length < 11) {
+    err.textContent='رقم الهاتف يجب أن يتكون من 11 رقماً'; err.style.display='block'; el.style.borderColor='#f59e0b';
+  } else { err.style.display='none'; el.style.borderColor='#10b981'; }
+}
+
+/* ── Address: restricted to letters/digits/spaces ───────────────────────── */
 function validateAddress(el) {
   el.value = el.value.replace(/[^؀-ۿa-zA-Z0-9 ]/g, '');
   if (el.value.length > 22) el.value = el.value.slice(0, 22);
 }
 
-/* Item name: Arabic letters, English letters, digits, spaces only — max 50 chars */
+/* ── Item name: unrestricted — accepts any character ────────────────────── */
 function validateItemName(el) {
-  el.value = el.value.replace(/[^؀-ۿa-zA-Z0-9 ]/g, '');
-  if (el.value.length > 50) el.value = el.value.slice(0, 50);
+  /* no character filtering — accept everything the user types */
 }
 
-/* Price: stored as raw string — allows smooth typing of trailing dot (e.g. "5656.")
-   type="text" + inputmode="decimal" avoids browser number-field interference     */
+/* ── Price / qty helpers ────────────────────────────────────────────────── */
 function clampPrice(el) {
-  /* 1. Strip everything except digits and dot */
   let val = el.value.replace(/[^0-9.]/g, '');
-  /* 2. Collapse multiple dots — keep only the first */
   const dotIdx = val.indexOf('.');
-  if (dotIdx !== -1) {
-    val = val.slice(0, dotIdx + 1) + val.slice(dotIdx + 1).replace(/\./g, '');
-  }
-  /* 3. Cap integer part at 8 digits (before the dot) */
+  if (dotIdx !== -1) val = val.slice(0, dotIdx+1) + val.slice(dotIdx+1).replace(/\./g,'');
   const intPart = dotIdx !== -1 ? val.slice(0, dotIdx) : val;
-  if (intPart.length > 8) {
-    val = dotIdx !== -1
-      ? intPart.slice(0, 8) + val.slice(dotIdx)
-      : intPart.slice(0, 8);
-  }
-  /* 4. Write back only when different — prevents cursor jump */
+  if (intPart.length > 8) val = dotIdx !== -1 ? intPart.slice(0,8)+val.slice(dotIdx) : intPart.slice(0,8);
   if (el.value !== val) el.value = val;
 }
 function clampQty(el) {
   let v = parseInt(el.value);
-  if (isNaN(v) || v < 1) { el.value = 1; return; }
-  if (v > 999) el.value = 999;
+  if (isNaN(v) || v < 1) { el.value=1; return; }
+  if (v > 999) el.value=999;
 }
 
+/* ── Add item card ──────────────────────────────────────────────────────── */
 function addItem() {
   const el=document.createElement('div');
   el.className='item-card';
@@ -293,7 +334,7 @@ function addItem() {
     <button type="button" class="del-btn" onclick="this.parentElement.remove();calcTotal()">
       <i data-lucide="x" style="width:11px;height:11px"></i>
     </button>
-    <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
+    <input type="text" placeholder="اسم المادة" class="item-name field" style="margin-bottom:7px" required>
     <div style="display:flex;gap:7px">
       <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
       <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
@@ -303,21 +344,19 @@ function addItem() {
 }
 
 function calcTotal() {
-  let t = 0;
-  document.querySelectorAll('.item-card').forEach(c => {
-    /* parseFloat safely handles trailing dot: '5656.' → 5656, '' → NaN → 0 */
-    const price = parseFloat(c.querySelector('.item-price').value) || 0;
-    const qty   = parseInt(c.querySelector('.item-qty').value,10)  || 0;
-    t += price * qty;
+  let t=0;
+  document.querySelectorAll('.item-card').forEach(c=>{
+    const price=parseFloat(c.querySelector('.item-price').value)||0;
+    const qty  =parseInt(c.querySelector('.item-qty').value,10)||0;
+    t+=price*qty;
   });
-  /* No division — 5656 × 1 = 5656, always. Display as-is. */
-  document.getElementById('totalDisplay').textContent = t.toLocaleString('en-US');
+  document.getElementById('totalDisplay').textContent=t.toLocaleString('en-US');
 }
 
-function toast(msg, ok=true) {
+function toast(msg,ok=true) {
   const el=document.getElementById('toast');
   el.textContent=msg; el.className=ok?'ok':'err';
-  setTimeout(()=>el.className='hidden', 3400);
+  setTimeout(()=>el.className='hidden',3400);
 }
 
 function resetForm() {
@@ -325,9 +364,14 @@ function resetForm() {
   document.getElementById('phoneErr').style.display='none';
   document.getElementById('custPhone').style.borderColor='';
   document.getElementById('custType').selectedIndex=0;
+  /* Reset image field */
+  document.getElementById('invoiceImage').value='';
+  document.getElementById('imgLabel').classList.remove('has-file');
+  document.getElementById('imgLabelText').textContent='اضغط لرفع صورة الفاتورة';
+  document.getElementById('imgPreview').style.display='none';
   document.getElementById('itemsContainer').innerHTML=`
     <div class="item-card">
-      <input type="text" placeholder="اسم المادة" class="item-name field" maxlength="50" oninput="validateItemName(this)" style="margin-bottom:7px" required>
+      <input type="text" placeholder="اسم المادة" class="item-name field" style="margin-bottom:7px" required>
       <div style="display:flex;gap:7px">
         <input type="text" inputmode="decimal" placeholder="السعر" oninput="clampPrice(this);calcTotal()" class="item-price field" style="flex:1" required>
         <input type="number" value="1" min="1" max="999" oninput="clampQty(this);calcTotal()" class="item-qty field" style="width:74px;text-align:center" required>
@@ -342,25 +386,32 @@ document.getElementById('salesForm').addEventListener('submit', async e=>{
   const btn=document.getElementById('submitBtn'), txt=document.getElementById('btnText');
   btn.disabled=true; txt.textContent='جاري الحفظ...';
 
-  /* Phone gate: optional — only validate if non-empty */
-  const phoneVal = document.getElementById('custPhone').value;
+  const phoneVal=document.getElementById('custPhone').value;
   if (phoneVal && !/^07\d{9}$/.test(phoneVal)) {
-    toast('رقم الهاتف غير صحيح — يجب أن يبدأ بـ 07 ويتكون من 11 رقماً', false);
+    toast('رقم الهاتف غير صحيح — يجب أن يبدأ بـ 07 ويتكون من 11 رقماً',false);
     btn.disabled=false; txt.textContent='حفظ الفاتورة'; return;
   }
 
   const items=[]; let valid=true;
   document.querySelectorAll('.item-card').forEach(c=>{
-    const n = c.querySelector('.item-name').value.trim();
-    /* parseFloat handles trailing dots gracefully: '444.' → 444 */
-    const p = parseFloat(c.querySelector('.item-price').value);
-    const q = parseInt(c.querySelector('.item-qty').value);
-    if (!n || isNaN(p) || p <= 0 || isNaN(q) || q < 1) { valid=false; return; }
-    items.push({ name: n, price: p, qty: q });
+    const n=c.querySelector('.item-name').value.trim();
+    const p=parseFloat(c.querySelector('.item-price').value);
+    const q=parseInt(c.querySelector('.item-qty').value);
+    if(!n||isNaN(p)||p<=0||isNaN(q)||q<1){valid=false;return;}
+    items.push({name:n,price:p,qty:q});
   });
-
   if(!valid||!items.length){toast('يرجى التحقق من بيانات المواد',false);btn.disabled=false;txt.textContent='حفظ الفاتورة';return;}
 
+  /* Upload image if selected */
+  let invoice_image_url = null;
+  const imgFile = document.getElementById('invoiceImage').files[0];
+  if (imgFile) {
+    txt.textContent='جاري رفع الصورة...';
+    try { invoice_image_url = await uploadInvoiceImage(imgFile); }
+    catch(err) { toast(err.message, false); btn.disabled=false; txt.textContent='حفظ الفاتورة'; return; }
+  }
+
+  txt.textContent='جاري الحفظ...';
   try {
     const res=await fetch('/api/sales',{
       method:'POST',
@@ -370,15 +421,16 @@ document.getElementById('salesForm').addEventListener('submit', async e=>{
         phone:document.getElementById('custPhone').value.trim(),
         address:document.getElementById('custAddress').value.trim(),
         type:document.getElementById('custType').value,
-        items
+        items,
+        invoice_image_url
       })
     });
     const d=await res.json();
     if(!res.ok){toast(d.error||'فشل في حفظ الفاتورة',false);}
     else{toast('✓ تم حفظ الفاتورة بنجاح!',true);resetForm();}
   } catch(err){
-    console.error('[sales submit]', err);
-    toast('تعذر الاتصال بالخادم: ' + err.message, false);
+    console.error('[sales submit]',err);
+    toast('تعذر الاتصال بالخادم: '+err.message,false);
   }
   finally{btn.disabled=false;txt.textContent='حفظ الفاتورة';}
 });

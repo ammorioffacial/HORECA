@@ -149,6 +149,34 @@
 
 /* Hidden on screen — only shown by @media print */
 #printable-statement { display:none; }
+
+/* ── Image lightbox modal ─────────────────────────── */
+#imgModal {
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(15,23,42,0.88); align-items:center; justify-content:center;
+  padding:1rem;
+}
+#imgModal.open { display:flex; }
+#imgModal img {
+  max-width:min(92vw,680px); max-height:86vh;
+  border-radius:1rem; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  object-fit:contain;
+}
+#imgModal button {
+  position:absolute; top:1rem; right:1rem;
+  background:rgba(255,255,255,0.12); border:none; border-radius:50%;
+  width:38px; height:38px; cursor:pointer; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.2rem; backdrop-filter:blur(4px);
+  transition:background 0.16s;
+}
+#imgModal button:hover { background:rgba(255,255,255,0.22); }
+.inv-thumb {
+  width:36px; height:36px; object-fit:cover; border-radius:7px;
+  cursor:pointer; border:1.5px solid rgba(79,70,229,0.2);
+  transition:transform 0.16s, box-shadow 0.16s;
+}
+.inv-thumb:hover { transform:scale(1.08); box-shadow:0 4px 14px rgba(79,70,229,0.25); }
 </style>
 </head>
 <body>
@@ -278,6 +306,7 @@
             <th>المادة المشتراة</th>
             <th style="text-align:center">الكمية</th>
             <th style="text-align:left">السعر</th>
+            <th style="text-align:center">صورة</th>
           </tr></thead>
           <tbody id="invoicesBody"></tbody>
         </table>
@@ -290,6 +319,12 @@
 
 <!-- Print statement surface — invisible on screen, shown only by @media print -->
 <div id="printable-statement"></div>
+
+<!-- Image lightbox modal -->
+<div id="imgModal" onclick="closeImgModal(event)">
+  <button onclick="closeImgModal()" title="إغلاق">✕</button>
+  <img id="imgModalSrc" src="" alt="صورة الفاتورة">
+</div>
 
 <nav class="hs-botnav">
   <a href="dashboard.html" class="hs-botnav__item">
@@ -322,6 +357,21 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 
 const TL={restaurant:'صاحب مطعم',coffee:'صاحب كوفي',shop:'صاحب محل',normal:'زبون عادي'};
 const fmtDate=iso=>iso?new Date(iso).toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'}):'—';
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function openImgModal(url) {
+  document.getElementById('imgModalSrc').src = url;
+  document.getElementById('imgModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeImgModal(e) {
+  if (e && e.target !== document.getElementById('imgModal') && e.target.tagName !== 'BUTTON') return;
+  document.getElementById('imgModal').classList.remove('open');
+  document.getElementById('imgModalSrc').src = '';
+  document.body.style.overflow = '';
+}
 
 /* ── Print customer statement using native browser engine ── */
 function printStatement() {
@@ -388,6 +438,7 @@ function printStatement() {
         <th>المادة المشتراة</th>
         <th class="ps-center">الكمية</th>
         <th>السعر</th>
+        <th class="ps-center">صورة</th>
       </tr></thead>
       <tbody>${tbodyClone}</tbody>
     </table>
@@ -446,27 +497,35 @@ async function loadProfile() {
     document.getElementById('invoiceCount').textContent=`${invoices.length} فاتورة`;
 
     if(!invoices.length){
-      tb.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد فواتير</td></tr>`;
+      tb.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد فواتير</td></tr>`;
     } else {
       let html='';
       invoices.forEach(inv=>{
         const items=Array.isArray(inv.items_json)?inv.items_json:JSON.parse(inv.items_json);
+        const imgUrl = inv.invoice_image_url || null;
         items.forEach((item,idx)=>{
+          /* Image cell: show thumbnail on first row only, empty on subsequent item rows */
+          const imgCell = idx===0 && imgUrl
+            ? `<td style="text-align:center" rowspan="${items.length}">
+                 <img class="inv-thumb" src="${escHtml(imgUrl)}" alt="صورة" onclick="openImgModal('${escHtml(imgUrl)}')">
+               </td>`
+            : (idx===0 ? `<td style="text-align:center" rowspan="${items.length}">—</td>` : '');
           html+=`<tr>
             <td style="color:var(--text-sub);font-size:0.74rem;font-weight:600">
               ${idx===0?`<span style="font-weight:800;color:var(--text);font-size:0.78rem">${fmtDate(inv.date)}</span>`:''}
             </td>
-            <td style="font-weight:700;font-size:0.78rem;color:var(--text)">${item.name}</td>
+            <td style="font-weight:700;font-size:0.78rem;color:var(--text)">${escHtml(item.name)}</td>
             <td style="text-align:center">
               <span style="background:rgba(26,34,50,0.07);color:var(--text);padding:2px 9px;border-radius:6px;font-size:0.68rem;font-weight:900">${item.qty}</span>
             </td>
             <td style="text-align:left;font-weight:900;font-size:0.78rem;color:var(--text)">
               ${Number(item.price*item.qty).toLocaleString('en-US')} IQD
             </td>
+            ${imgCell}
           </tr>`;
         });
         html+=`<tr style="background:var(--indigo-soft)">
-          <td colspan="3" style="padding:5px 14px;font-size:0.6rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">إجمالي الفاتورة</td>
+          <td colspan="4" style="padding:5px 14px;font-size:0.6rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">إجمالي الفاتورة</td>
           <td style="text-align:left;padding:5px 14px;font-weight:900;font-size:0.78rem;color:var(--indigo)">${Number(inv.total_amount).toLocaleString('en-US')} IQD</td>
         </tr>`;
       });
