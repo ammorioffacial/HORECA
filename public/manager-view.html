@@ -190,6 +190,17 @@
 }
 .edit-inv-btn:hover { background:rgba(79,70,229,0.14); }
 
+/* ── Delete invoice button ────────────────────────── */
+.del-inv-btn {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:7px; border:1.5px solid rgba(239,68,68,0.25);
+  background:rgba(239,68,68,0.06); color:#ef4444;
+  font-size:0.65rem; font-weight:800; cursor:pointer;
+  font-family:'Cairo',sans-serif; transition:background 0.15s;
+  white-space:nowrap; margin-top:4px;
+}
+.del-inv-btn:hover { background:rgba(239,68,68,0.14); }
+
 /* ── Edit invoice modal ───────────────────────────── */
 #editModal {
   display:none; position:fixed; inset:0; z-index:10000;
@@ -774,6 +785,34 @@ function printStatement() {
   window.print();
 }
 
+/* ── Delete invoice ──────────────────────────────────────── */
+async function deleteInvoice(invId, btnEl) {
+  if (!confirm('هل أنت متأكد من حذف هذه الفاتورة؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+
+  btnEl.disabled = true;
+  btnEl.textContent = '...';
+
+  try {
+    const res = await fetch(`/api/invoices/${invId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      mvToast(d.error || 'فشل في حذف الفاتورة', false);
+      btnEl.disabled = false;
+      btnEl.textContent = '🗑 حذف';
+      return;
+    }
+    mvToast('✓ تم حذف الفاتورة بنجاح', true);
+    loadProfile(); // re-fetch and re-render the whole table
+  } catch (err) {
+    mvToast('تعذر الاتصال بالخادم: ' + err.message, false);
+    btnEl.disabled = false;
+    btnEl.textContent = '🗑 حذف';
+  }
+}
+
 /* ── Load profile ─────────────────────────────────────────── */
 let _currentCustomerType = '';
 
@@ -831,12 +870,17 @@ async function loadProfile() {
                 <img class="inv-thumb" src="${escHtml(imgUrl)}" alt="صورة" onclick="openImgModal('${escHtml(imgUrl)}')">
               </td>`
             :(idx===0?`<td style="text-align:center" rowspan="${items.length}">—</td>`:'');
-          /* edit button — first row only, spans all rows */
+          /* edit + delete buttons — first row only, spans all item rows */
           const editCell=idx===0
-            ?`<td style="text-align:center" rowspan="${items.length}">
-                <button class="edit-inv-btn" onclick='openEditModal(${escHtml(JSON.stringify(inv))}, "${escHtml(_currentCustomerType)}")'>
-                  ✎ تعديل
-                </button>
+            ?`<td style="text-align:center;vertical-align:middle" rowspan="${items.length}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <button class="edit-inv-btn" onclick='openEditModal(${escHtml(JSON.stringify(inv))}, "${escHtml(_currentCustomerType)}")'>
+                    ✎ تعديل
+                  </button>
+                  <button class="del-inv-btn" onclick="deleteInvoice(${inv.id}, this)">
+                    🗑 حذف
+                  </button>
+                </div>
               </td>`
             :'';
           html+=`<tr>

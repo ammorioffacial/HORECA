@@ -157,4 +157,23 @@ router.patch('/invoices/:id', verifyToken, requireRole('manager'), async (req, r
   }
 });
 
+// DELETE /api/invoices/:id — Manager only
+router.delete('/invoices/:id', verifyToken, requireRole('manager'), async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(id)) return res.status(400).json({ error: 'معرف الفاتورة غير صالح' });
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM invoices WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'الفاتورة غير موجودة' });
+    res.json({ success: true, message: 'تم حذف الفاتورة بنجاح' });
+  } catch (err) {
+    console.error('[invoices DELETE] DB error:', err.message);
+    const detail = process.env.NODE_ENV !== 'production' ? ` — ${err.message}` : '';
+    res.status(500).json({ error: `فشل في حذف الفاتورة${detail}` });
+  }
+});
+
 module.exports = router;
