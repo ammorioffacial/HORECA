@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="shared.css">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 .stat-block {
   background:#fff; border:1px solid var(--border);
@@ -177,6 +178,88 @@
   transition:transform 0.16s, box-shadow 0.16s;
 }
 .inv-thumb:hover { transform:scale(1.08); box-shadow:0 4px 14px rgba(79,70,229,0.25); }
+
+/* ── Edit invoice button ──────────────────────────── */
+.edit-inv-btn {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:7px; border:1.5px solid rgba(79,70,229,0.25);
+  background:rgba(79,70,229,0.06); color:var(--indigo);
+  font-size:0.65rem; font-weight:800; cursor:pointer;
+  font-family:'Cairo',sans-serif; transition:background 0.15s;
+  white-space:nowrap;
+}
+.edit-inv-btn:hover { background:rgba(79,70,229,0.14); }
+
+/* ── Edit invoice modal ───────────────────────────── */
+#editModal {
+  display:none; position:fixed; inset:0; z-index:10000;
+  background:rgba(15,23,42,0.7); align-items:center; justify-content:center;
+  padding:1rem; backdrop-filter:blur(3px);
+}
+#editModal.open { display:flex; }
+.edit-modal-box {
+  background:#fff; border-radius:1.25rem; width:100%; max-width:560px;
+  max-height:90vh; overflow-y:auto; padding:1.5rem;
+  box-shadow:0 24px 60px rgba(15,23,42,0.22);
+  font-family:'Cairo',sans-serif;
+}
+.edit-modal-box .em-title {
+  font-size:1rem; font-weight:900; color:#0f172a;
+  margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between;
+}
+.em-close {
+  background:none; border:none; cursor:pointer; color:#94a3b8;
+  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; transition:background 0.15s;
+}
+.em-close:hover { background:rgba(15,23,42,0.06); color:#0f172a; }
+.em-field {
+  width:100%; background:#f8fafc; border:1.5px solid rgba(15,23,42,0.11);
+  border-radius:0.75rem; padding:0.65rem 0.85rem;
+  font-size:0.85rem; font-weight:700; color:#0f172a;
+  font-family:'Cairo',sans-serif; outline:none;
+  transition:border-color 0.18s, box-shadow 0.18s;
+}
+.em-field:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.08); background:#fff; }
+.em-field::placeholder { color:rgba(15,23,42,0.28); font-weight:500; }
+.em-item-card {
+  background:rgba(15,23,42,0.02); border:1.5px solid rgba(15,23,42,0.07);
+  border-radius:0.9rem; padding:0.75rem; position:relative; margin-bottom:7px;
+}
+.em-del-btn {
+  position:absolute; top:-7px; left:-7px;
+  width:22px; height:22px; border-radius:50%;
+  background:#8A2E33; color:#fff; border:none;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:0.7rem; line-height:0;
+}
+.em-save-btn {
+  width:100%; background:linear-gradient(135deg,#4f46e5 0%,#6366f1 100%);
+  border:none; border-radius:1rem; padding:0.85rem; color:#fff;
+  font-size:0.9rem; font-weight:900; font-family:'Cairo',sans-serif;
+  cursor:pointer; margin-top:1rem;
+  box-shadow:0 5px 18px rgba(79,70,229,0.28);
+  transition:opacity 0.16s;
+}
+.em-save-btn:disabled { opacity:0.6; cursor:not-allowed; }
+.em-add-btn {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:0.7rem; font-weight:800; color:#4f46e5;
+  background:rgba(79,70,229,0.08); border:none; border-radius:9999px;
+  padding:0.3rem 0.8rem; cursor:pointer; font-family:'Cairo',sans-serif;
+}
+.em-img-label {
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  width:100%; border:1.5px dashed rgba(79,70,229,0.3);
+  border-radius:0.75rem; padding:0.65rem 1rem;
+  cursor:pointer; background:rgba(79,70,229,0.03);
+  font-size:0.75rem; font-weight:700; color:rgba(15,23,42,0.4);
+  font-family:'Cairo',sans-serif; transition:border-color 0.18s, background 0.18s;
+}
+.em-img-label:hover { border-color:#4f46e5; background:rgba(79,70,229,0.07); color:#4f46e5; }
+.em-img-label.has-file { border-style:solid; border-color:#10b981; background:rgba(16,185,129,0.05); color:#10b981; }
+#emImgPreview { width:100%; max-height:140px; object-fit:contain; border-radius:0.65rem; margin-top:6px; border:1px solid rgba(15,23,42,0.07); }
+.em-slabel { font-size:0.58rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:rgba(15,23,42,0.3); margin-bottom:0.4rem; }
 </style>
 </head>
 <body>
@@ -307,6 +390,7 @@
             <th style="text-align:center">الكمية</th>
             <th style="text-align:left">السعر</th>
             <th style="text-align:center">صورة</th>
+            <th style="text-align:center">تعديل</th>
           </tr></thead>
           <tbody id="invoicesBody"></tbody>
         </table>
@@ -324,6 +408,72 @@
 <div id="imgModal" onclick="closeImgModal(event)">
   <button onclick="closeImgModal()" title="إغلاق">✕</button>
   <img id="imgModalSrc" src="" alt="صورة الفاتورة">
+</div>
+
+<!-- Edit invoice modal -->
+<div id="editModal">
+  <div class="edit-modal-box">
+    <div class="em-title">
+      <span>تعديل الفاتورة</span>
+      <button class="em-close" onclick="closeEditModal()" title="إغلاق">✕</button>
+    </div>
+
+    <!-- Customer type -->
+    <div style="margin-bottom:0.85rem">
+      <div class="em-slabel">نوع الزبون</div>
+      <select id="emCustType" class="em-field">
+        <option value="">— غير محدد —</option>
+        <option value="normal">زبون عادي</option>
+        <option value="restaurant">صاحب مطعم</option>
+        <option value="shop">صاحب محل</option>
+        <option value="coffee">صاحب كوفي</option>
+      </select>
+    </div>
+
+    <!-- Items -->
+    <div style="margin-bottom:0.85rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+        <div class="em-slabel" style="margin-bottom:0">المواد المشتراة</div>
+        <button type="button" class="em-add-btn" onclick="emAddItem()">+ إضافة مادة</button>
+      </div>
+      <div id="emItemsContainer"></div>
+    </div>
+
+    <!-- Image upload -->
+    <div style="margin-bottom:0.85rem">
+      <div class="em-slabel">صورة الفاتورة</div>
+      <div id="emCurrentImg" style="display:none;margin-bottom:6px">
+        <img id="emCurrentImgEl" src="" alt="الصورة الحالية"
+             style="max-height:90px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);cursor:pointer"
+             onclick="openImgModal(this.src)">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+          <span style="font-size:0.65rem;font-weight:700;color:var(--text-dim)">الصورة الحالية</span>
+          <button type="button" onclick="emRemoveCurrentImg()"
+                  style="font-size:0.62rem;font-weight:800;color:#ef4444;background:none;border:none;cursor:pointer;padding:0">
+            × حذف الصورة
+          </button>
+        </div>
+      </div>
+      <label for="emImgFile" class="em-img-label" id="emImgLabel">
+        <span id="emImgLabelText">اضغط لرفع صورة جديدة (اختياري)</span>
+      </label>
+      <input id="emImgFile" type="file" accept="image/*" style="display:none" onchange="emHandleImg(this)">
+      <img id="emImgPreview" style="display:none" alt="معاينة">
+    </div>
+
+    <!-- Total display -->
+    <div style="background:linear-gradient(135deg,#8A2E33,#a83840);border-radius:1rem;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+      <span style="font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase">الإجمالي</span>
+      <div>
+        <span id="emTotalDisplay" style="font-size:1.3rem;font-weight:900;color:#fff">0</span>
+        <span style="font-size:0.58rem;font-weight:700;color:rgba(255,255,255,0.7);margin-right:4px">IQD</span>
+      </div>
+    </div>
+
+    <button class="em-save-btn" id="emSaveBtn" onclick="saveEditedInvoice()">
+      <span id="emSaveTxt">حفظ التعديلات</span>
+    </button>
+  </div>
 </div>
 
 <nav class="hs-botnav">
@@ -355,31 +505,230 @@ function logout()       { localStorage.clear(); location.href = '/login.html'; }
 function openSidebar()  { document.getElementById('sidebar').classList.add('open');    document.getElementById('overlay').classList.add('visible'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('visible'); }
 
+/* ── Supabase client (for image uploads in the edit modal) ── */
+const SUPABASE_URL   = 'https://vbyianeklnghhdnfbxio.supabase.co';
+const SUPABASE_ANON  = 'YOUR_ANON_PUBLIC_KEY'; /* ← paste your anon key */
+const STORAGE_BUCKET = 'invoice-images';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
 const TL={restaurant:'صاحب مطعم',coffee:'صاحب كوفي',shop:'صاحب محل',normal:'زبون عادي'};
 const fmtDate=iso=>iso?new Date(iso).toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'}):'—';
 
-function escHtml(str) {
+function escHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function openImgModal(url) {
-  document.getElementById('imgModalSrc').src = url;
+
+/* ── Image lightbox ─────────────────────────────────────── */
+function openImgModal(url){
+  document.getElementById('imgModalSrc').src=url;
   document.getElementById('imgModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeImgModal(e){
+  if(e && e.target!==document.getElementById('imgModal') && e.target.tagName!=='BUTTON') return;
+  document.getElementById('imgModal').classList.remove('open');
+  document.getElementById('imgModalSrc').src='';
+  document.body.style.overflow='';
+}
+
+/* ── Toast (reused for edit feedback) ──────────────────── */
+function mvToast(msg,ok=true){
+  /* reuse the shared toast if present, otherwise create one */
+  let el=document.getElementById('mvToast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='mvToast';
+    el.style.cssText='position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:99999;padding:0.65rem 1.3rem;border-radius:0.85rem;font-weight:800;font-size:0.78rem;font-family:Cairo,sans-serif;max-width:320px;width:90%;text-align:center;box-shadow:0 6px 20px rgba(33,43,62,0.14);transition:opacity 0.28s';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.background=ok?'#10B981':'#ef4444';
+  el.style.color='#fff';
+  el.style.opacity='1';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.style.opacity='0';},3200);
+}
+
+/* ── Edit modal state ───────────────────────────────────── */
+let _editInvId   = null;   // invoice id being edited
+let _editImgMode = 'keep'; // 'keep' | 'remove' | 'replace'
+let _editImgFile = null;   // new File if mode === 'replace'
+
+function openEditModal(inv, custType) {
+  _editInvId   = inv.id;
+  _editImgMode = 'keep';
+  _editImgFile = null;
+
+  /* Customer type */
+  document.getElementById('emCustType').value = custType || '';
+
+  /* Items */
+  const items = Array.isArray(inv.items_json) ? inv.items_json : JSON.parse(inv.items_json);
+  const container = document.getElementById('emItemsContainer');
+  container.innerHTML = '';
+  items.forEach(item => emAddItem(item.name, item.price, item.qty));
+  emCalcTotal();
+
+  /* Current image */
+  const imgUrl = inv.invoice_image_url || null;
+  const currentImgWrap = document.getElementById('emCurrentImg');
+  if (imgUrl) {
+    document.getElementById('emCurrentImgEl').src = imgUrl;
+    currentImgWrap.style.display = 'block';
+  } else {
+    currentImgWrap.style.display = 'none';
+  }
+
+  /* Reset new-image fields */
+  document.getElementById('emImgFile').value = '';
+  document.getElementById('emImgLabel').classList.remove('has-file');
+  document.getElementById('emImgLabelText').textContent = 'اضغط لرفع صورة جديدة (اختياري)';
+  document.getElementById('emImgPreview').style.display = 'none';
+
+  document.getElementById('editModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-function closeImgModal(e) {
-  if (e && e.target !== document.getElementById('imgModal') && e.target.tagName !== 'BUTTON') return;
-  document.getElementById('imgModal').classList.remove('open');
-  document.getElementById('imgModalSrc').src = '';
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
   document.body.style.overflow = '';
 }
 
-/* ── Print customer statement using native browser engine ── */
+/* Close modal when clicking the dark backdrop */
+document.getElementById('editModal').addEventListener('click', function(e){
+  if(e.target === this) closeEditModal();
+});
+
+/* ── Edit modal — item helpers ──────────────────────────── */
+function emAddItem(name='', price='', qty=1) {
+  const card = document.createElement('div');
+  card.className = 'em-item-card';
+  card.innerHTML = `
+    <button type="button" class="em-del-btn" onclick="this.parentElement.remove();emCalcTotal()">✕</button>
+    <input type="text" class="em-field em-name" placeholder="اسم المادة" value="${escHtml(String(name))}" style="margin-bottom:6px;width:100%">
+    <div style="display:flex;gap:6px">
+      <input type="text" inputmode="decimal" class="em-field em-price" placeholder="السعر" value="${escHtml(String(price))}" oninput="emClampPrice(this);emCalcTotal()" style="flex:1">
+      <input type="number" class="em-field em-qty" value="${Number(qty)}" min="1" max="999" oninput="emClampQty(this);emCalcTotal()" style="width:68px;text-align:center">
+    </div>`;
+  document.getElementById('emItemsContainer').appendChild(card);
+}
+
+function emClampPrice(el){
+  let val=el.value.replace(/[^0-9.]/g,'');
+  const dot=val.indexOf('.');
+  if(dot!==-1) val=val.slice(0,dot+1)+val.slice(dot+1).replace(/\./g,'');
+  const int=dot!==-1?val.slice(0,dot):val;
+  if(int.length>8) val=dot!==-1?int.slice(0,8)+val.slice(dot):int.slice(0,8);
+  if(el.value!==val) el.value=val;
+}
+function emClampQty(el){
+  let v=parseInt(el.value);
+  if(isNaN(v)||v<1){el.value=1;return;}
+  if(v>999)el.value=999;
+}
+function emCalcTotal(){
+  let t=0;
+  document.querySelectorAll('#emItemsContainer .em-item-card').forEach(c=>{
+    const p=parseFloat(c.querySelector('.em-price').value)||0;
+    const q=parseInt(c.querySelector('.em-qty').value,10)||0;
+    t+=p*q;
+  });
+  document.getElementById('emTotalDisplay').textContent=t.toLocaleString('en-US');
+}
+
+/* ── Edit modal — image helpers ─────────────────────────── */
+function emRemoveCurrentImg(){
+  document.getElementById('emCurrentImg').style.display='none';
+  _editImgMode='remove';
+}
+function emHandleImg(input){
+  const file=input.files[0];
+  if(!file){ _editImgMode='keep'; _editImgFile=null; return; }
+  _editImgMode='replace';
+  _editImgFile=file;
+  document.getElementById('emImgLabel').classList.add('has-file');
+  document.getElementById('emImgLabelText').textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('emImgPreview');
+    prev.src=e.target.result; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadEditImage(file){
+  const ext=file.name.split('.').pop();
+  const path=`invoices/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const {error}=await _supabase.storage.from(STORAGE_BUCKET).upload(path,file,{
+    cacheControl:'3600', upsert:false, contentType:file.type
+  });
+  if(error) throw new Error('فشل رفع الصورة: '+error.message);
+  const {data}=_supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/* ── Save edited invoice ─────────────────────────────────── */
+async function saveEditedInvoice(){
+  const btn=document.getElementById('emSaveBtn');
+  const txt=document.getElementById('emSaveTxt');
+  btn.disabled=true; txt.textContent='جاري الحفظ...';
+
+  /* Collect items */
+  const items=[]; let valid=true;
+  document.querySelectorAll('#emItemsContainer .em-item-card').forEach(c=>{
+    const n=c.querySelector('.em-name').value.trim();
+    const p=parseFloat(c.querySelector('.em-price').value);
+    const q=parseInt(c.querySelector('.em-qty').value,10);
+    if(!n||isNaN(p)||p<=0||isNaN(q)||q<1){valid=false;return;}
+    items.push({name:n,price:p,qty:q});
+  });
+  if(!valid||!items.length){
+    mvToast('يرجى التحقق من بيانات المواد',false);
+    btn.disabled=false; txt.textContent='حفظ التعديلات'; return;
+  }
+
+  /* Resolve image URL */
+  let imageField = {}; // will be spread into body — omit key means "don't touch"
+  if(_editImgMode==='remove'){
+    imageField={invoice_image_url:null};
+  } else if(_editImgMode==='replace' && _editImgFile){
+    txt.textContent='جاري رفع الصورة...';
+    try{
+      const url=await uploadEditImage(_editImgFile);
+      imageField={invoice_image_url:url};
+    }catch(err){
+      mvToast(err.message,false);
+      btn.disabled=false; txt.textContent='حفظ التعديلات'; return;
+    }
+  }
+  /* mode==='keep' → imageField stays empty → server leaves image unchanged */
+
+  txt.textContent='جاري الحفظ...';
+  try{
+    const res=await fetch(`/api/invoices/${_editInvId}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({items,...imageField})
+    });
+    const d=await res.json();
+    if(!res.ok){mvToast(d.error||'فشل في التحديث',false);}
+    else{
+      mvToast('✓ تم تحديث الفاتورة بنجاح!',true);
+      closeEditModal();
+      loadProfile(); // refresh the whole view
+    }
+  }catch(err){
+    mvToast('تعذر الاتصال بالخادم: '+err.message,false);
+  }finally{
+    btn.disabled=false; txt.textContent='حفظ التعديلات';
+  }
+}
+
+/* ── Print customer statement ───────────────────────────── */
 function printStatement() {
-  /* Read data from the already-rendered DOM */
   const name     = document.getElementById('profileName').textContent;
   const type     = document.getElementById('profileType').textContent;
   const initials = document.getElementById('profileInitials').textContent;
-  /* Strip the icon text — grab only the visible text node content */
   const phoneRaw = document.getElementById('profilePhone').textContent.trim();
   const phone    = phoneRaw || 'غير متوفر';
   const address  = document.getElementById('profileAddress').textContent.trim();
@@ -388,72 +737,45 @@ function printStatement() {
   const lastDate = document.getElementById('statLastDate').textContent;
   const invCount = document.getElementById('invoiceCount').textContent;
   const today    = new Date().toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'});
-
-  /* Clone the invoice table rows exactly as rendered */
   const tbodyClone = document.getElementById('invoicesBody').innerHTML;
 
   document.getElementById('printable-statement').innerHTML = `
     <div class="ps-header">
-      <div>
-        <div class="ps-title">كشف حساب العميل</div>
-        <div class="ps-meta">تاريخ الإصدار: ${today}</div>
-      </div>
+      <div><div class="ps-title">كشف حساب العميل</div><div class="ps-meta">تاريخ الإصدار: ${today}</div></div>
       <img src="logoen.png" class="ps-logo" alt="Horeca Spot">
     </div>
-
     <div class="ps-profile">
       <div class="ps-avatar">${initials}</div>
       <div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="ps-name">${name}</span>
-          <span class="ps-badge">${type}</span>
+          <span class="ps-name">${name}</span><span class="ps-badge">${type}</span>
         </div>
-        <div class="ps-detail">
-          ${address ? address + ' &nbsp;|&nbsp; ' : ''}${phone}
-        </div>
+        <div class="ps-detail">${address ? address+' &nbsp;|&nbsp; ' : ''}${phone}</div>
       </div>
     </div>
-
     <div class="ps-stats">
-      <div class="ps-stat">
-        <div class="ps-stat-lbl">إجمالي المبيعات</div>
-        <div class="ps-stat-val">${total}</div>
-        <div class="ps-stat-sub">IQD</div>
-      </div>
-      <div class="ps-stat">
-        <div class="ps-stat-lbl">عدد الزيارات</div>
-        <div class="ps-stat-val">${visits}</div>
-        <div class="ps-stat-sub">زيارة</div>
-      </div>
-      <div class="ps-stat">
-        <div class="ps-stat-lbl">آخر معاملة</div>
-        <div class="ps-stat-val" style="font-size:10pt">${lastDate}</div>
-      </div>
+      <div class="ps-stat"><div class="ps-stat-lbl">إجمالي المبيعات</div><div class="ps-stat-val">${total}</div><div class="ps-stat-sub">IQD</div></div>
+      <div class="ps-stat"><div class="ps-stat-lbl">عدد الزيارات</div><div class="ps-stat-val">${visits}</div><div class="ps-stat-sub">زيارة</div></div>
+      <div class="ps-stat"><div class="ps-stat-lbl">آخر معاملة</div><div class="ps-stat-val" style="font-size:10pt">${lastDate}</div></div>
     </div>
-
     <div class="ps-table-title">سجل المشتريات &nbsp;—&nbsp; ${invCount}</div>
     <table class="ps-table">
       <thead><tr>
-        <th>التاريخ</th>
-        <th>المادة المشتراة</th>
-        <th class="ps-center">الكمية</th>
-        <th>السعر</th>
+        <th>التاريخ</th><th>المادة المشتراة</th>
+        <th class="ps-center">الكمية</th><th>السعر</th>
         <th class="ps-center">صورة</th>
       </tr></thead>
       <tbody>${tbodyClone}</tbody>
     </table>
+    <div class="ps-footer">Horeca Spot CRM &nbsp;&bull;&nbsp; جميع الحقوق محفوظة &nbsp;&bull;&nbsp; ${today}</div>`;
 
-    <div class="ps-footer">
-      Horeca Spot CRM &nbsp;&bull;&nbsp; جميع الحقوق محفوظة &nbsp;&bull;&nbsp; ${today}
-    </div>`;
-
-  const cleanup = () => {
-    document.getElementById('printable-statement').innerHTML = '';
-    window.removeEventListener('afterprint', cleanup);
-  };
-  window.addEventListener('afterprint', cleanup);
+  const cleanup=()=>{ document.getElementById('printable-statement').innerHTML=''; window.removeEventListener('afterprint',cleanup); };
+  window.addEventListener('afterprint',cleanup);
   window.print();
 }
+
+/* ── Load profile ─────────────────────────────────────────── */
+let _currentCustomerType = '';
 
 async function loadProfile() {
   const id=new URLSearchParams(location.search).get('id');
@@ -466,7 +788,9 @@ async function loadProfile() {
     const res=await fetch(`/api/customers/${id}`,{headers:{'Authorization':`Bearer ${token}`}});
     if(res.status===401||res.status===403){logout();return;}
     if(res.status===404) throw new Error('not found');
-    const {customer:c, invoices}=await res.json();
+    const {customer:c,invoices}=await res.json();
+
+    _currentCustomerType = c.type || '';
 
     document.getElementById('profileInitials').textContent=c.name.trim().substring(0,2).toUpperCase();
     document.getElementById('profileName').textContent=c.name;
@@ -474,20 +798,17 @@ async function loadProfile() {
 
     if(c.address) document.getElementById('profileAddress').innerHTML=`<i data-lucide="map-pin" style="width:13px;height:13px"></i> ${c.address}`;
 
-    const hasPhone = c.phone && c.phone.trim();
-    document.getElementById('profilePhone').innerHTML = hasPhone
-      ? `<i data-lucide="phone" style="width:13px;height:13px"></i> ${c.phone}`
-      : `<i data-lucide="phone-off" style="width:13px;height:13px;opacity:0.4"></i> <span style="color:var(--text-dim);font-style:italic">غير متوفر</span>`;
+    const hasPhone=c.phone&&c.phone.trim();
+    document.getElementById('profilePhone').innerHTML=hasPhone
+      ?`<i data-lucide="phone" style="width:13px;height:13px"></i> ${c.phone}`
+      :`<i data-lucide="phone-off" style="width:13px;height:13px;opacity:0.4"></i> <span style="color:var(--text-dim);font-style:italic">غير متوفر</span>`;
 
-    /* WhatsApp button — hide entirely when no phone */
-    const waBtn = document.getElementById('whatsappBtn');
-    if (hasPhone) {
-      const raw = c.phone.replace(/\D/g, '');
-      waBtn.href = `https://wa.me/${raw.startsWith('0') ? '964' + raw.slice(1) : raw}`;
-      waBtn.style.display = '';
-    } else {
-      waBtn.style.display = 'none';
-    }
+    const waBtn=document.getElementById('whatsappBtn');
+    if(hasPhone){
+      const raw=c.phone.replace(/\D/g,'');
+      waBtn.href=`https://wa.me/${raw.startsWith('0')?'964'+raw.slice(1):raw}`;
+      waBtn.style.display='';
+    } else { waBtn.style.display='none'; }
 
     document.getElementById('statTotal').textContent=Number(c.total_spent).toLocaleString('en-US');
     document.getElementById('statVisits').textContent=c.visit_count;
@@ -497,19 +818,27 @@ async function loadProfile() {
     document.getElementById('invoiceCount').textContent=`${invoices.length} فاتورة`;
 
     if(!invoices.length){
-      tb.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد فواتير</td></tr>`;
+      tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-dim);font-size:0.76rem;font-weight:700">لا توجد فواتير</td></tr>`;
     } else {
       let html='';
       invoices.forEach(inv=>{
         const items=Array.isArray(inv.items_json)?inv.items_json:JSON.parse(inv.items_json);
-        const imgUrl = inv.invoice_image_url || null;
+        const imgUrl=inv.invoice_image_url||null;
         items.forEach((item,idx)=>{
-          /* Image cell: show thumbnail on first row only, empty on subsequent item rows */
-          const imgCell = idx===0 && imgUrl
-            ? `<td style="text-align:center" rowspan="${items.length}">
-                 <img class="inv-thumb" src="${escHtml(imgUrl)}" alt="صورة" onclick="openImgModal('${escHtml(imgUrl)}')">
-               </td>`
-            : (idx===0 ? `<td style="text-align:center" rowspan="${items.length}">—</td>` : '');
+          /* image cell — spans all item rows for this invoice */
+          const imgCell=idx===0&&imgUrl
+            ?`<td style="text-align:center" rowspan="${items.length}">
+                <img class="inv-thumb" src="${escHtml(imgUrl)}" alt="صورة" onclick="openImgModal('${escHtml(imgUrl)}')">
+              </td>`
+            :(idx===0?`<td style="text-align:center" rowspan="${items.length}">—</td>`:'');
+          /* edit button — first row only, spans all rows */
+          const editCell=idx===0
+            ?`<td style="text-align:center" rowspan="${items.length}">
+                <button class="edit-inv-btn" onclick='openEditModal(${escHtml(JSON.stringify(inv))}, "${escHtml(_currentCustomerType)}")'>
+                  ✎ تعديل
+                </button>
+              </td>`
+            :'';
           html+=`<tr>
             <td style="color:var(--text-sub);font-size:0.74rem;font-weight:600">
               ${idx===0?`<span style="font-weight:800;color:var(--text);font-size:0.78rem">${fmtDate(inv.date)}</span>`:''}
@@ -521,12 +850,12 @@ async function loadProfile() {
             <td style="text-align:left;font-weight:900;font-size:0.78rem;color:var(--text)">
               ${Number(item.price*item.qty).toLocaleString('en-US')} IQD
             </td>
-            ${imgCell}
+            ${imgCell}${editCell}
           </tr>`;
         });
         html+=`<tr style="background:var(--indigo-soft)">
           <td colspan="4" style="padding:5px 14px;font-size:0.6rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">إجمالي الفاتورة</td>
-          <td style="text-align:left;padding:5px 14px;font-weight:900;font-size:0.78rem;color:var(--indigo)">${Number(inv.total_amount).toLocaleString('en-US')} IQD</td>
+          <td colspan="2" style="text-align:left;padding:5px 14px;font-weight:900;font-size:0.78rem;color:var(--indigo)">${Number(inv.total_amount).toLocaleString('en-US')} IQD</td>
         </tr>`;
       });
       tb.innerHTML=html;
@@ -535,7 +864,7 @@ async function loadProfile() {
     document.getElementById('loadingState').classList.add('hidden');
     document.getElementById('profileContent').classList.remove('hidden');
     lucide.createIcons();
-  } catch(e) {
+  } catch(e){
     console.error(e);
     document.getElementById('loadingState').classList.add('hidden');
     const err=document.getElementById('errorState');

@@ -98,4 +98,63 @@ router.post('/', verifyToken, requireRole('employee'), async (req, res) => {
   }
 });
 
+// PATCH /api/invoices/:id — Manager only
+// Updates items_json, total_amount, and optionally invoice_image_url
+router.patch('/invoices/:id', verifyToken, requireRole('manager'), async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(id)) return res.status(400).json({ error: 'معرف الفاتورة غير صالح' });
+
+  const { items, invoice_image_url } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'يجب أن تحتوي الفاتورة على مادة واحدة على الأقل' });
+  }
+
+  for (const item of items) {
+    if (!item.name || item.price == null || item.qty == null) {
+      return res.status(400).json({ error: 'كل مادة يجب أن تحتوي على اسم وسعر وكمية' });
+    }
+    const p = parseFloat(item.price);
+    const q = parseInt(item.qty, 10);
+    if (isNaN(p) || p <= 0) return res.status(400).json({ error: `سعر المادة "${item.name}" غير صالح` });
+    if (isNaN(q) || q < 1)  return res.status(400).json({ error: `كمية المادة "${item.name}" غير صالحة` });
+  }
+
+  const cleanItems = items.map(item => ({
+    name:  item.name.trim(),
+    price: Math.round(parseFloat(item.price) * 100) / 100,
+    qty:   parseInt(item.qty, 10),
+  }));
+
+  const total = Math.round(
+    cleanItems.reduce((sum, item) => sum + item.price * item.qty, 0) * 100
+  ) / 100;
+
+  // invoice_image_url = null means "clear it"; undefined means "leave unchanged"
+  const hasImageField = Object.prototype.hasOwnProperty.call(req.body, 'invoice_image_url');
+  const imageUrl = hasImageField
+    ? (invoice_image_url && typeof invoice_image_url === 'string' ? invoice_image_url.trim() : null)
+    : undefined;
+
+  try {
+    let query, params;
+    if (hasImageField) {
+      query  = `UPDATE invoices SET items_json=$1, total_amount=$2, invoice_image_url=$3 WHERE id=$4 RETURNING id`;
+      params = [JSON.stringify(cleanItems), total, imageUrl, id];
+    } else {
+      query  = `UPDATE invoices SET items_json=$1, total_amount=$2 WHERE id=$3 RETURNING id`;
+      params = [JSON.stringify(cleanItems), total, id];
+    }
+
+    const result = await pool.query(query, params);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'الفاتورة غير موجودة' });
+
+    res.json({ success: true, message: 'تم تحديث الفاتورة بنجاح' });
+  } catch (err) {
+    console.error('[invoices PATCH] DB error:', err.message);
+    const detail = process.env.NODE_ENV !== 'production' ? ` — ${err.message}` : '';
+    res.status(500).json({ error: `فشل في تحديث الفاتورة${detail}` });
+  }
+});
+
 module.exports = router;

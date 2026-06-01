@@ -24,7 +24,7 @@ app.use(cors({
     }
     cb(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -38,6 +38,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',      authRoutes);
 app.use('/api/sales',     salesRoutes);
+app.use('/api/invoices',  salesRoutes);   // PATCH /api/invoices/:id shares the sales router
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/reports',   reportsRoutes);
