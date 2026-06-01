@@ -792,25 +792,17 @@ async function deleteInvoice(invId, btnEl) {
   btnEl.disabled = true;
   btnEl.textContent = '...';
 
-  try {
-    const res = await fetch(`/api/invoices/${invId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const d = await res.json();
-    if (!res.ok) {
-      mvToast(d.error || 'فشل في حذف الفاتورة', false);
-      btnEl.disabled = false;
-      btnEl.textContent = '🗑 حذف';
-      return;
-    }
-    mvToast('✓ تم حذف الفاتورة بنجاح', true);
-    loadProfile(); // re-fetch and re-render the whole table
-  } catch (err) {
-    mvToast('تعذر الاتصال بالخادم: ' + err.message, false);
+  const { error } = await _supabase.from('invoices').delete().eq('id', invId);
+
+  if (error) {
+    mvToast('فشل في حذف الفاتورة: ' + error.message, false);
     btnEl.disabled = false;
     btnEl.textContent = '🗑 حذف';
+    return;
   }
+
+  mvToast('✓ تم حذف الفاتورة بنجاح', true);
+  loadProfile();
 }
 
 /* ── Load profile ─────────────────────────────────────────── */
