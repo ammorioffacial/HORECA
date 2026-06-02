@@ -201,6 +201,22 @@
 }
 .del-inv-btn:hover { background:rgba(239,68,68,0.14); }
 
+/* ── Delete customer button ───────────────────────── */
+.del-cust-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:0.5rem 1.1rem; border-radius:0.75rem;
+  background:#fff; color:#ef4444;
+  border:1.5px solid rgba(239,68,68,0.35);
+  font-weight:800; font-size:0.78rem; cursor:pointer;
+  font-family:'Cairo',sans-serif;
+  box-shadow:0 1px 6px rgba(239,68,68,0.08);
+  transition:background 0.16s, box-shadow 0.16s;
+}
+.del-cust-btn:hover {
+  background:rgba(239,68,68,0.06);
+  box-shadow:0 3px 12px rgba(239,68,68,0.16);
+}
+
 /* ── Edit invoice modal ───────────────────────────── */
 #editModal {
   display:none; position:fixed; inset:0; z-index:10000;
@@ -336,6 +352,10 @@
         العودة لقائمة العملاء
       </button>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button class="del-cust-btn" onclick="deleteCustomer()">
+          <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+          حذف العميل
+        </button>
         <button class="print-btn" onclick="printStatement()">
           <i data-lucide="printer" style="width:14px;height:14px"></i>
           طباعة كشف الحساب
@@ -782,6 +802,23 @@ function printStatement() {
   const cleanup=()=>{ document.getElementById('printable-statement').innerHTML=''; window.removeEventListener('afterprint',cleanup); };
   window.addEventListener('afterprint',cleanup);
   window.print();
+}
+
+/* ── Delete customer ─────────────────────────────────────── */
+async function deleteCustomer() {
+  if (!confirm('هل أنت متأكد من حذف هذا العميل نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+
+  const customerId = new URLSearchParams(location.search).get('id');
+
+  const { error } = await _supabase.from('customers').delete().eq('id', customerId);
+
+  if (error) {
+    mvToast('فشل في حذف العميل: ' + error.message, false);
+    return;
+  }
+
+  alert('✓ تم حذف العميل بنجاح.');
+  location.href = 'customer-records.html';
 }
 
 /* ── Delete invoice ──────────────────────────────────────── */
