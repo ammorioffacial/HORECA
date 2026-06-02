@@ -518,7 +518,7 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 
 /* ── Supabase client (for image uploads in the edit modal) ── */
 const SUPABASE_URL   = 'https://vbyianeklnghhdnfbxio.supabase.co';
-const SUPABASE_ANON  = 'YOUR_ANON_PUBLIC_KEY'; /* ← paste your anon key */
+const SUPABASE_ANON  = 'sb_publishable_-Y5nLSFAwkb_crJfzMzrnw_RpWmQYpu'; /* ← paste your anon key */
 const STORAGE_BUCKET = 'invoice-images';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -684,7 +684,7 @@ async function saveEditedInvoice(){
   const txt=document.getElementById('emSaveTxt');
   btn.disabled=true; txt.textContent='جاري الحفظ...';
 
-  /* Collect items */
+  /* Collect and validate items */
   const items=[]; let valid=true;
   document.querySelectorAll('#emItemsContainer .em-item-card').forEach(c=>{
     const n=c.querySelector('.em-name').value.trim();
@@ -698,41 +698,40 @@ async function saveEditedInvoice(){
     btn.disabled=false; txt.textContent='حفظ التعديلات'; return;
   }
 
-  /* Resolve image URL */
-  let imageField = {}; // will be spread into body — omit key means "don't touch"
+  const total=Math.round(items.reduce((s,i)=>s+i.price*i.qty,0)*100)/100;
+
+  /* Build the update payload */
+  const payload={
+    items_json: items,
+    total_amount: total,
+  };
+
+  /* Resolve image */
   if(_editImgMode==='remove'){
-    imageField={invoice_image_url:null};
+    payload.invoice_image_url=null;
   } else if(_editImgMode==='replace' && _editImgFile){
     txt.textContent='جاري رفع الصورة...';
     try{
-      const url=await uploadEditImage(_editImgFile);
-      imageField={invoice_image_url:url};
+      payload.invoice_image_url=await uploadEditImage(_editImgFile);
     }catch(err){
       mvToast(err.message,false);
       btn.disabled=false; txt.textContent='حفظ التعديلات'; return;
     }
   }
-  /* mode==='keep' → imageField stays empty → server leaves image unchanged */
+  /* mode==='keep' → don't include invoice_image_url → Supabase leaves it unchanged */
 
   txt.textContent='جاري الحفظ...';
-  try{
-    const res=await fetch(`/api/invoices/${_editInvId}`,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-      body:JSON.stringify({items,...imageField})
-    });
-    const d=await res.json();
-    if(!res.ok){mvToast(d.error||'فشل في التحديث',false);}
-    else{
-      mvToast('✓ تم تحديث الفاتورة بنجاح!',true);
-      closeEditModal();
-      loadProfile(); // refresh the whole view
-    }
-  }catch(err){
-    mvToast('تعذر الاتصال بالخادم: '+err.message,false);
-  }finally{
-    btn.disabled=false; txt.textContent='حفظ التعديلات';
+  const {error}=await _supabase.from('invoices').update(payload).eq('id',_editInvId);
+
+  if(error){
+    mvToast('فشل في تحديث الفاتورة: '+error.message,false);
+  } else {
+    mvToast('✓ تم تحديث الفاتورة بنجاح!',true);
+    closeEditModal();
+    loadProfile();
   }
+
+  btn.disabled=false; txt.textContent='حفظ التعديلات';
 }
 
 /* ── Print customer statement ───────────────────────────── */
