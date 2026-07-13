@@ -458,6 +458,7 @@
         <option value="restaurant">صاحب مطعم</option>
         <option value="shop">صاحب محل</option>
         <option value="coffee">صاحب كوفي</option>
+        <option value="page">صاحب بيج</option>
       </select>
     </div>
 
@@ -542,7 +543,7 @@ const SUPABASE_ANON  = 'sb_publishable_-Y5nLSFAwkb_crJfzMzrnw_RpWmQYpu'; /* ← 
 const STORAGE_BUCKET = 'invoice-images';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-const TL={restaurant:'صاحب مطعم',coffee:'صاحب كوفي',shop:'صاحب محل',normal:'زبون عادي'};
+const TL={restaurant:'صاحب مطعم',coffee:'صاحب كوفي',shop:'صاحب محل',normal:'زبون عادي',page:'صاحب بيج'};
 const fmtDate=iso=>iso?new Date(iso).toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'}):'—';
 
 function escHtml(str){
